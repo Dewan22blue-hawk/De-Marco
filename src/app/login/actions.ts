@@ -21,9 +21,16 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    redirect('/login?error=Invalid+credentials')
+    console.error("Supabase login error:", error.message, error)
+    redirect(`/login?error=${encodeURIComponent(error.message)}`)
   }
 
   revalidatePath('/', 'layout')
   redirect('/dashboard')
+}
+
+export async function logout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/login')
 }

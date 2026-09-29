@@ -1,34 +1,89 @@
-import Link from 'next/link'
-import { LayoutDashboard, Megaphone, Palette, Users, FileText, Settings, Droplets, Image } from 'lucide-react'
+import Link from "next/link"
+import { UserMenu } from "@/components/layout/user-menu"
+import { createClient } from "@/lib/supabase/server"
 
-export function Sidebar() {
+export async function Sidebar() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = user ? await supabase.from('profiles').select('*').eq('id', user.id).single() : { data: null }
+
   return (
-    <aside className="w-64 flex-shrink-0 bg-neutral-100 dark:bg-neutral-900 flex flex-col h-screen p-4 sticky top-0 transition-all duration-300 shadow-[4px_0_15px_rgba(0,0,0,0.05)] border-r border-neutral-200 z-20">
-      <div className="mb-8 px-2 flex items-center mt-2">
-        <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center font-bold text-xl shadow-[2px_2px_4px_rgba(59,130,246,0.5),_-2px_-2px_4px_rgba(255,255,255,0.9),_inset_2px_2px_4px_rgba(255,255,255,0.4)] mr-3">D</div>
-        <h2 className="text-xl font-bold tracking-tight text-neutral-900">Deraly</h2>
+    <aside className="fixed top-0 left-0 h-screen w-64 z-40 bg-surface-container-low shadow-xl dark:shadow-none flex flex-col justify-between p-4 border-r border-outline-variant/30">
+      <div className="flex flex-col gap-6">
+        {/* Brand & Workspace Header */}
+        <div className="flex items-center gap-3 px-2 pt-1">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white shadow-md shadow-primary/20 shrink-0">
+            <span className="material-symbols-outlined text-[22px]">auto_awesome</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-headline-sm font-headline-sm font-bold text-on-surface tracking-tight">De-Marco Studio</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              <span className="text-label-code-sm font-label-code-sm text-on-surface-variant font-medium">Enterprise Tier</span>
+            </div>
+          </div>
+        </div>
+
+        {/* New Campaign CTA Button */}
+        <Link href="/dashboard/campaigns/new" className="w-full clay-button-primary text-white font-headline-sm text-body-md font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">add_circle</span>
+          <span className="">New Campaign</span>
+        </Link>
+
+        {/* Main Navigation Menu */}
+        <nav className="flex flex-col gap-1.5">
+          {/* Active Link */}
+          <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary-container text-on-primary-container font-headline-sm text-body-md shadow-sm">
+            <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
+            <span className="">Overview</span>
+          </Link>
+          <Link href="/dashboard/campaigns" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-150 font-body-md text-body-md">
+            <span className="material-symbols-outlined text-[20px]">campaign</span>
+            <span className="">Campaigns</span>
+            <span className="ml-auto bg-surface-container-high text-primary font-label-code-sm text-label-code-sm px-2 py-0.5 rounded-full font-semibold">14</span>
+          </Link>
+          <Link href="/dashboard/ai-studio" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-150 font-body-md text-body-md group">
+            <span className="material-symbols-outlined text-[20px] text-secondary group-hover:scale-110 transition-transform">auto_awesome</span>
+            <span className="">AI Studio</span>
+            <span className="ml-auto bg-secondary-fixed text-on-secondary-fixed font-label-code-sm text-label-code-sm px-1.5 py-0.5 rounded-md font-bold">PRO</span>
+          </Link>
+          <Link href="/dashboard/audiences" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-150 font-body-md text-body-md">
+            <span className="material-symbols-outlined text-[20px]">groups</span>
+            <span className="">Audiences</span>
+          </Link>
+          <Link href="/dashboard/analytics" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-150 font-body-md text-body-md">
+            <span className="material-symbols-outlined text-[20px]">insights</span>
+            <span className="">Analytics</span>
+          </Link>
+          <Link href="/dashboard/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-150 font-body-md text-body-md">
+            <span className="material-symbols-outlined text-[20px]">settings</span>
+            <span className="">Settings</span>
+          </Link>
+        </nav>
       </div>
-      <nav className="flex-1 space-y-2">
-        <NavItem href="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" />
-        <NavItem href="/marketing" icon={<Megaphone size={20} />} label="Marketing" />
-        <NavItem href="/creative" icon={<Palette size={20} />} label="Creative Studio" />
-        <NavItem href="/assets" icon={<Image size={20} />} label="Asset Library" />
-        <NavItem href="/documents" icon={<FileText size={20} />} label="Documents" />
-        <NavItem href="/crm" icon={<Users size={20} />} label="Business Dev" />
-        <NavItem href="/brand" icon={<Droplets size={20} />} label="Brand Kit" />
-      </nav>
-      <div className="mt-auto">
-        <NavItem href="/settings" icon={<Settings size={20} />} label="Settings" />
+
+      {/* Sidebar Footer Telemetry & Profile */}
+      <div className="flex flex-col gap-3 pt-4 border-t border-outline-variant/30">
+        <div className="flex flex-col gap-1">
+          <Link href="/dashboard/live-pools" className="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors text-body-sm font-body-sm w-full">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">dataset</span>
+              <span className="">Live Pools</span>
+            </div>
+            <span className="flex items-center gap-1 font-label-code-sm text-label-code-sm font-semibold text-tertiary">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-ping"></span>
+              4 Active
+            </span>
+          </Link>
+          <Link href="/dashboard/docs" className="flex items-center gap-2 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors text-body-sm font-body-sm w-full">
+            <span className="material-symbols-outlined text-[18px]">menu_book</span>
+            <span className="">Documentation</span>
+          </Link>
+        </div>
+
+        {/* User Card */}
+        <UserMenu userProfile={profile} />
       </div>
     </aside>
-  )
-}
-
-function NavItem({ href, icon, label }: { href: string, icon: React.ReactNode, label: string }) {
-  return (
-    <Link href={href} className="flex items-center px-4 py-3 rounded-2xl text-neutral-600 hover:bg-neutral-200/50 hover:text-neutral-900 hover:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),_inset_-2px_-2px_5px_rgba(255,255,255,0.5)] transition-all">
-      <span className="mr-3 text-neutral-500 hover:text-neutral-900">{icon}</span>
-      <span className="font-medium text-sm">{label}</span>
-    </Link>
   )
 }
