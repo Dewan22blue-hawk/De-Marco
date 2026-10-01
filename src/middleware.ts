@@ -44,6 +44,9 @@ export async function middleware(request: NextRequest) {
 
   // Jika user sudah login namun ke halaman login atau register, banting ke dashboard
   if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/register")) {
+      if (request.nextUrl.searchParams.has("error")) {
+          return supabaseResponse
+      }
       const url = request.nextUrl.clone()
       url.pathname = "/dashboard"
       return NextResponse.redirect(url)

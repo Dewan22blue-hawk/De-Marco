@@ -1,5 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar"
 import { Topbar } from "@/components/layout/topbar"
+import { SidebarProvider } from "@/components/layout/sidebar-provider"
+import { MainContentWrapper } from "@/components/layout/main-content-wrapper"
 
 export default function MainLayout({
   children,
@@ -7,14 +9,16 @@ export default function MainLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen bg-neutral-100">
-      <Sidebar />
-      <div className="flex-1 flex flex-col relative w-full min-w-0">
-        <Topbar />
-        <main className="flex-1 p-8 overflow-y-auto">
-          {children}
-        </main>
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-neutral-100 relative">
+        <Sidebar />
+        <MainContentWrapper className="flex-1 flex flex-col relative">
+          <Topbar />
+          <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+            {children}
+          </main>
+        </MainContentWrapper>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }

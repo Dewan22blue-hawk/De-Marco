@@ -1,8 +1,8 @@
 "use client"
 
-import { motion, HTMLMotionProps } from "framer-motion"
+import { motion, HTMLMotionProps, type Variants } from "framer-motion"
 
-export const containerVariants = {
+export const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { 
     opacity: 1,
@@ -10,9 +10,9 @@ export const containerVariants = {
   }
 }
 
-export const itemVariants = {
+export const itemVariants: Variants = {
   hidden: { opacity: 0, y: 15 },
-  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  visible: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
 }
 
 export function MotionDiv({ children, ...props }: HTMLMotionProps<"div">) {

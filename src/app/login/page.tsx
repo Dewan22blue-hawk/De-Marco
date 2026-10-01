@@ -7,9 +7,16 @@ import Link from "next/link"
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; message?: string }>
 }) {
-  const { error } = await searchParams;
+  const { error, message } = await searchParams;
+  const errorMessage = error === "invalid"
+    ? "Enter a valid email and password."
+    : error === "organization"
+      ? "Your account is not assigned to an active organization yet."
+      : error === "credentials"
+        ? "The email or password is incorrect."
+        : null
   
   return (
     <div className="flex bg-neutral-100 min-h-screen items-center justify-center p-4">
@@ -23,9 +30,15 @@ export default async function LoginPage({
           </p>
         </div>
         
-        {error && (
+        {errorMessage && (
           <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative" role="alert">
-            <span className="block sm:inline">{error}</span>
+            <span className="block sm:inline">{errorMessage}</span>
+          </div>
+        )}
+
+        {message === "registered" && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800" role="status">
+            Account created. Sign in to continue.
           </div>
         )}
 
