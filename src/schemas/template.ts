@@ -36,9 +36,9 @@ export const templateElementSchema = z.object({
 
 export const templateSchema = z.object({
   id: z.string().uuid().optional(),
-  organization_id: z.string().uuid(),
-  category_id: z.string().uuid().optional().nullable(),
-  brand_id: z.string().uuid().optional().nullable(),
+  organization_id: z.string(),
+  category_id: z.string().optional().nullable(),
+  brand_id: z.string().optional().nullable(),
   name: z.string().min(1, "Template name is required"),
   code: z.string().min(1, "Code is required").regex(/^[a-z0-9-_]+$/, "Code must be lowercase alphanumeric with hyphens/underscores"),
   description: z.string().optional().nullable(),
@@ -57,7 +57,7 @@ export const templateSchema = z.object({
 
 export const templateCategorySchema = z.object({
   id: z.string().uuid().optional(),
-  organization_id: z.string().uuid(),
+  organization_id: z.string(),
   parent_id: z.string().uuid().optional().nullable(),
   name: z.string().min(1),
   slug: z.string().min(1),

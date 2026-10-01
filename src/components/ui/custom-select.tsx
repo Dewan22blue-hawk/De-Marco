@@ -15,6 +15,7 @@ interface CustomSelectProps {
   placeholder?: string
   className?: string
   dropdownClassName?: string
+  name?: string
 }
 
 export function CustomSelect({
@@ -23,7 +24,8 @@ export function CustomSelect({
   options,
   placeholder = "Select an option",
   className = "",
-  dropdownClassName = ""
+  dropdownClassName = "",
+  name
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -42,6 +44,7 @@ export function CustomSelect({
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
+      {name && <input type="hidden" name={name} value={value} />}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}

@@ -1,0 +1,148 @@
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { CustomSelect } from "@/components/ui/custom-select"
+import { Input } from "@/components/ui/input"
+import { createTemplateFromForm } from "../actions"
+import { useActionState } from "react"
+
+export function TemplateFormClient({ categories }: { categories: any[] }) {
+  const [templateType, setTemplateType] = useState("social_post")
+  const [categoryId, setCategoryId] = useState("")
+  const [formatCode, setFormatCode] = useState("instagram_post")
+  const [unit, setUnit] = useState("px")
+
+  const categoryOptions = categories.map(cat => ({ value: cat.id, label: cat.name }))
+  const typeOptions = [
+    { value: "flyer", label: "Flyer" },
+    { value: "poster", label: "Poster" },
+    { value: "banner", label: "Banner" },
+    { value: "social_post", label: "Social Post" },
+    { value: "social_story", label: "Social Story" },
+    { value: "custom", label: "Custom" },
+  ]
+  const formatOptions = [
+    { value: "instagram_post", label: "Instagram Post" },
+    { value: "instagram_story", label: "Instagram Story" },
+    { value: "facebook", label: "Facebook" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "whatsapp", label: "WhatsApp" },
+    { value: "a4", label: "A4" },
+    { value: "custom", label: "Custom" },
+  ]
+  const unitOptions = [
+    { value: "px", label: "px" },
+    { value: "cm", label: "cm" },
+    { value: "in", label: "in" },
+  ]
+
+  return (
+    <form action={createTemplateFromForm} className="clay-surface rounded-3xl border border-outline-variant/20 p-6 sm:p-8 space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+        <div className="space-y-2 md:col-span-2">
+          <label htmlFor="name" className="text-sm font-semibold text-on-surface">Template Name</label>
+          <Input
+            id="name"
+            name="name"
+            required
+            placeholder="e.g. Ramadan Promo Banner"
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <label htmlFor="description" className="text-sm font-semibold text-on-surface">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            rows={3}
+            className="flex w-full rounded-2xl border-none bg-neutral-100/50 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.05),_inset_-4px_-4px_8px_rgba(255,255,255,0.8)] dark:shadow-[inset_4px_4px_8px_rgba(0,0,0,0.5),_inset_-4px_-4px_8px_rgba(255,255,255,0.05)] focus:shadow-[inset_6px_6px_10px_rgba(0,0,0,0.1),_inset_-6px_-6px_10px_rgba(255,255,255,0.9)] transition-all resize-y min-h-[100px]"
+            placeholder="Template untuk promo Ramadan untuk social media"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="code" className="text-sm font-semibold text-on-surface">Code (Unique)</label>
+          <Input
+            id="code"
+            name="code"
+            required
+            placeholder="e.g. ramadan-promo"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="template_type" className="text-sm font-semibold text-on-surface">Template Type</label>
+          <CustomSelect
+            name="template_type"
+            value={templateType}
+            onChange={setTemplateType}
+            options={typeOptions}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="category_id" className="text-sm font-semibold text-on-surface">Category</label>
+          <CustomSelect
+            name="category_id"
+            value={categoryId}
+            onChange={setCategoryId}
+            options={categoryOptions}
+            placeholder="Select a category"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="format_code" className="text-sm font-semibold text-on-surface">Format</label>
+          <CustomSelect
+            name="format_code"
+            value={formatCode}
+            onChange={setFormatCode}
+            options={formatOptions}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 md:col-span-2 lg:col-span-2">
+          <div className="space-y-2">
+            <label htmlFor="width" className="text-sm font-semibold text-on-surface">Width</label>
+            <Input
+              id="width"
+              name="width"
+              type="number"
+              min={1}
+              defaultValue={1080}
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="height" className="text-sm font-semibold text-on-surface">Height</label>
+            <Input
+              id="height"
+              name="height"
+              type="number"
+              min={1}
+              defaultValue={1080}
+            />
+          </div>
+          <div className="space-y-2 col-span-2 sm:col-span-1">
+            <label htmlFor="unit" className="text-sm font-semibold text-on-surface">Unit</label>
+            <CustomSelect
+              name="unit"
+              value={unit}
+              onChange={setUnit}
+              options={unitOptions}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-3 pt-6 border-t border-outline-variant/20 mt-8">
+        <Link href="/dashboard/templates" className="rounded-xl px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low transition-colors">
+          Cancel
+        </Link>
+        <button type="submit" className="clay-button-primary rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-95 shadow-lg">
+          Create Template
+        </button>
+      </div>
+    </form>
+  )
+}

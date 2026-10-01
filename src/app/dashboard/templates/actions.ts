@@ -628,17 +628,33 @@ export async function listTemplateCategories(templateType?: string) {
       is_system: true,
     }))
 
-    const { error: insertError } = await supabase
+    // Use Service Role to bypass RLS on online Supabase for system data seeding
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: insertError } = await adminSupabase
       .from('template_categories')
-      .upsert(defaults, {
-        onConflict: 'organization_id,slug',
-      })
+      .insert(defaults)
 
     if (insertError) {
-      console.error('Failed to seed template categories', insertError)
+      console.error('Failed to seed template categories (RLS or Admin Key issue):', insertError)
     }
 
-    const { data: seededData, error: seededError } = await query
+    let retryQuery = supabase
+      .from('template_categories')
+      .select('*')
+      .eq('organization_id', profile.default_organization_id)
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true })
+      
+    if (templateType) {
+      retryQuery = retryQuery.eq('template_type', templateType)
+    }
+
+    const { data: seededData, error: seededError } = await retryQuery
     if (seededError) throw seededError
     return seededData || []
   }

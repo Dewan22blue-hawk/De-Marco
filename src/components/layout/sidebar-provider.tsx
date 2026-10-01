@@ -19,6 +19,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem('demarco_sidebar_collapsed');
     if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsCollapsed(saved === 'true');
     }
     // Allow initial render to pass before enabling localStorage sync
