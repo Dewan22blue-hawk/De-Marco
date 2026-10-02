@@ -32,7 +32,7 @@ export default async function OrganizationSettingsPage() {
       <div>
         <h2 className="text-headline-md font-headline-md font-bold text-on-surface">Organization Profile</h2>
         <p className="text-body-sm text-on-surface-variant mt-1">
-          Manage your organization's legal and contact details. This information will be used on official documents like proposals and MoUs.
+          Manage your organization&apos;s legal and contact details. This information will be used on official documents like proposals and MoUs.
         </p>
       </div>
 

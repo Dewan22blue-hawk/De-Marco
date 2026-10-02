@@ -7,8 +7,8 @@ export async function createAuditLog(data: {
   table_name: string;
   record_id?: string;
   action: AuditAction;
-  old_data?: any;
-  new_data?: any;
+  old_data?: Record<string, unknown> | null;
+  new_data?: Record<string, unknown> | null;
   ip_address?: string;
   user_agent?: string;
 }) {

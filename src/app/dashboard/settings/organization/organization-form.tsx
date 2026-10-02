@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { updateOrganization } from "./actions"
 
-export function OrganizationForm({ initialData }: { initialData: any }) {
+export function OrganizationForm({ initialData }: { initialData: { id: string; [key: string]: string | null | undefined } }) {
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
 
@@ -20,8 +20,8 @@ export function OrganizationForm({ initialData }: { initialData: any }) {
         } else if (res.success) {
           setMessage({ type: "success", text: "Organization updated successfully." })
         }
-      } catch (err: any) {
-        setMessage({ type: "error", text: err.message || "An unexpected error occurred." })
+      } catch (err: unknown) {
+        setMessage({ type: "error", text: err instanceof Error ? err.message : "An unexpected error occurred." })
       }
     })
   }
@@ -42,7 +42,7 @@ export function OrganizationForm({ initialData }: { initialData: any }) {
           <input 
             type="text" 
             name="name"
-            defaultValue={initialData.name}
+            defaultValue={initialData.name || ""}
             required
             className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />

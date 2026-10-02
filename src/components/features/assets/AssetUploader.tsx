@@ -1,7 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { useState, useCallback, useRef } from "react"
-import { ImagePlus, Loader2, CheckCircle2, X, UploadCloud, AlertCircle, RefreshCw, FileIcon, FileVideo, FileAudio, FileText, FileArchive } from "lucide-react"
+import { ImagePlus, Loader2, CheckCircle2, X, UploadCloud, AlertCircle, RefreshCw, FileIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { saveAssetMetadata } from "@/app/dashboard/assets/actions"
 import { useRouter } from "next/navigation"
@@ -15,11 +16,6 @@ interface UploadFile {
   previewUrl?: string
 }
 
-const ALLOWED_TYPES = [
-  "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
-  "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "video/mp4", "video/webm", "audio/mpeg", "audio/wav", "application/zip", "application/x-zip-compressed"
-]
 const MAX_SIZE = 50 * 1024 * 1024 // 50MB
 
 export function AssetUploader({ categories = [] }: { categories?: Array<{id: string, name: string, slug: string}> }) {
@@ -50,11 +46,11 @@ export function AssetUploader({ categories = [] }: { categories?: Array<{id: str
     return null
   }
 
-  const addFiles = (newFiles: FileList | File[]) => {
+  const addFiles = useCallback((newFiles: FileList | File[]) => {
     const toAdd = Array.from(newFiles).map(file => {
       const error = validateFile(file)
       return {
-        id: Math.random().toString(36).substring(2, 9),
+        id: crypto.randomUUID(),
         file,
         status: error ? "error" : "queued",
         error,
@@ -62,7 +58,7 @@ export function AssetUploader({ categories = [] }: { categories?: Array<{id: str
       } as UploadFile
     })
     setFiles(prev => [...prev, ...toAdd])
-  }
+  }, [])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -70,7 +66,7 @@ export function AssetUploader({ categories = [] }: { categories?: Array<{id: str
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       addFiles(e.dataTransfer.files)
     }
-  }, [])
+  }, [addFiles])
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -92,7 +88,7 @@ export function AssetUploader({ categories = [] }: { categories?: Array<{id: str
       if (!user) throw new Error("Not authenticated")
 
       const fileExt = upload.file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
+      const fileName = `${crypto.randomUUID()}.${fileExt}`
       
       const { data: storageData, error: storageError } = await supabase.storage
         .from('assets')

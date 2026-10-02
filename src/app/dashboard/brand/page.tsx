@@ -21,7 +21,7 @@ export default async function BrandSettingsPage() {
         <div>
           <h2 className="text-headline-md font-headline-md font-bold text-on-surface">Brand Kit</h2>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Configure your organization's core brand identity.
+            Configure your organization&apos;s core brand identity.
           </p>
         </div>
       </div>

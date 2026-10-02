@@ -576,6 +576,8 @@ export async function createTemplateFromForm(formData: FormData): Promise<void> 
     width: Number(formData.get('width') || 1080),
     height: Number(formData.get('height') || 1080),
     unit: String(formData.get('unit') || 'px'),
+    thumbnail_asset_id: String(formData.get('thumbnail_asset_id') || '') || null,
+    background_asset_id: String(formData.get('background_asset_id') || '') || null,
     is_active: true,
     variables: [],
     elements: [],
@@ -587,6 +589,41 @@ export async function createTemplateFromForm(formData: FormData): Promise<void> 
 
   revalidatePath('/dashboard/templates')
   redirect('/dashboard/templates')
+}
+
+export async function updateTemplateFromForm(templateId: string, formData: FormData): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('default_organization_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.default_organization_id) throw new Error("No organization")
+
+  const payload = {
+    name: String(formData.get('name') || '').trim(),
+    code: String(formData.get('code') || '').trim(),
+    description: String(formData.get('description') || '').trim() || null,
+    category_id: String(formData.get('category_id') || '') || null,
+    template_type: String(formData.get('template_type') || 'custom') as 'flyer' | 'poster' | 'banner' | 'social_post' | 'social_story' | 'custom',
+    format_code: String(formData.get('format_code') || 'custom'),
+    width: Number(formData.get('width') || 1080),
+    height: Number(formData.get('height') || 1080),
+    unit: String(formData.get('unit') || 'px'),
+    thumbnail_asset_id: String(formData.get('thumbnail_asset_id') || '') || null,
+    background_asset_id: String(formData.get('background_asset_id') || '') || null,
+  }
+
+  const result = await updateTemplate(templateId, payload)
+  if (!result.success || !result.data) throw new Error('Failed to update template')
+
+  revalidatePath('/dashboard/templates')
+  revalidatePath(`/dashboard/templates/${templateId}`)
+  redirect(`/dashboard/templates/${templateId}`)
 }
 
 export async function listTemplateCategories(templateType?: string) {

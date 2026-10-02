@@ -24,16 +24,16 @@ export default async function MembersSettingsPage() {
     `)
     .eq("organization_id", profile.default_organization_id)
 
-  const userIds = membersRaw?.map((m: any) => m.user_id) || []
+  const userIds = membersRaw?.map((m: { user_id: string }) => m.user_id) || []
   
   const { data: profilesRaw } = await supabase
     .from("profiles")
     .select("id, full_name, email, avatar_asset_id, job_title")
     .in("id", userIds)
 
-  const members = membersRaw?.map((member: any) => ({
+  const members = membersRaw?.map((member: { user_id: string; [key: string]: unknown }) => ({
     ...member,
-    profiles: profilesRaw?.find((p: any) => p.id === member.user_id)
+    profiles: profilesRaw?.find((p: { id: string }) => p.id === member.user_id)
   }))
 
   const { data: roles } = await supabase.from("roles").select("id, name, display_name")

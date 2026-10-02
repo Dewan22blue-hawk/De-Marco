@@ -1,9 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { useState, useTransition } from "react"
 import { updateProfile } from "./actions"
 
-export function ProfileForm({ initialData, email }: { initialData: any, email: string }) {
+export function ProfileForm({ initialData, email }: { initialData: { [key: string]: string | null | undefined }, email: string }) {
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
 
@@ -20,8 +21,8 @@ export function ProfileForm({ initialData, email }: { initialData: any, email: s
         } else if (res.success) {
           setMessage({ type: "success", text: "Profile updated successfully." })
         }
-      } catch (err: any) {
-        setMessage({ type: "error", text: err.message || "An unexpected error occurred." })
+      } catch (err: unknown) {
+        setMessage({ type: "error", text: err instanceof Error ? err.message : "An unexpected error occurred." })
       }
     })
   }

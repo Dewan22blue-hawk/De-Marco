@@ -29,7 +29,7 @@ export async function getBrandKit(organizationId: string) {
   return brand
 }
 
-export async function upsertBrandKit(organizationId: string, data: any) {
+export async function upsertBrandKit(organizationId: string, data: Record<string, unknown>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Unauthorized")
@@ -60,6 +60,9 @@ export async function upsertBrandKit(organizationId: string, data: any) {
       tagline: validatedBrand.tagline,
       description: validatedBrand.description,
       preferred_cta: validatedBrand.preferred_cta,
+      tone_of_voice: validatedBrand.tone_of_voice,
+      forbidden_words: validatedBrand.forbidden_words,
+      logo_asset_id: validatedBrand.logo_asset_id,
       is_default: true,
       updated_at: new Date().toISOString(),
       updated_by: user.id,
@@ -74,8 +77,8 @@ export async function upsertBrandKit(organizationId: string, data: any) {
   if (data.colors && Array.isArray(data.colors)) {
     // Delete existing colors that are not in the new list if they have IDs
     const newColorIds = data.colors
-      .map((c: any) => c.id)
-      .filter((id: any) => id && !id.toString().startsWith("new_"));
+      .map((c: Record<string, unknown>) => c.id)
+      .filter((id: unknown) => id && typeof id === 'string' && !id.startsWith("new_"));
       
     if (oldBrand) {
         if (newColorIds.length > 0) {
@@ -93,15 +96,15 @@ export async function upsertBrandKit(organizationId: string, data: any) {
     }
 
     // Upsert colors
-    const colorsToUpsert = data.colors.map((c: any) => {
-      const colorObj: any = {
+    const colorsToUpsert = data.colors.map((c: Record<string, unknown>) => {
+      const colorObj: Record<string, unknown> = {
         brand_id: brand.id,
         name: c.name,
         hex_code: c.hex_code,
         role: c.role,
         sort_order: c.sort_order || 0
       }
-      if (c.id && !c.id.toString().startsWith("new_")) {
+      if (typeof c.id === 'string' && !c.id.startsWith("new_")) {
         colorObj.id = c.id
       }
       return colorObj
@@ -113,8 +116,8 @@ export async function upsertBrandKit(organizationId: string, data: any) {
 
   // 5. Handle Fonts
   if (data.fonts && Array.isArray(data.fonts)) {
-    const fontsToUpsert = data.fonts.map((f: any) => {
-      const fontObj: any = {
+    const fontsToUpsert = data.fonts.map((f: Record<string, unknown>) => {
+      const fontObj: Record<string, unknown> = {
         brand_id: brand.id,
         name: f.name,
         role: f.role,
@@ -122,7 +125,7 @@ export async function upsertBrandKit(organizationId: string, data: any) {
         weights: f.weights || [],
         is_active: true
       }
-      if (f.id && !f.id.toString().startsWith("new_")) {
+      if (typeof f.id === 'string' && !f.id.startsWith("new_")) {
         fontObj.id = f.id
       }
       return fontObj
@@ -142,11 +145,11 @@ export async function upsertBrandKit(organizationId: string, data: any) {
     new_data: brand
   })
 
-  revalidatePath("/dashboard/settings/brand")
+  revalidatePath("/dashboard/brand")
   return { success: true, data: brand }
 }
 
-export async function uploadBrandLogo(organizationId: string, brandId: string, assetData: any) {
+export async function uploadBrandLogo(organizationId: string, brandId: string, assetData: Record<string, unknown>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Unauthorized")
@@ -178,6 +181,6 @@ export async function uploadBrandLogo(organizationId: string, brandId: string, a
     new_data: { logo_asset_id: asset.id }
   })
 
-  revalidatePath("/dashboard/settings/brand")
+  revalidatePath("/dashboard/brand")
   return { success: true, asset }
 }

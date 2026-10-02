@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { useState } from "react"
@@ -7,37 +8,7 @@ import { ArrowLeft, Edit2, Copy, Loader2, Archive } from "lucide-react"
 import type { TemplateWithRelations } from "@/schemas/template"
 import { cloneTemplate, archiveTemplate } from "../actions"
 
-interface TemplateVariable {
-  id: string
-  variable_key: string
-  label: string
-  variable_type: string
-  default_value: string | null
-  placeholder: string | null
-  is_required: boolean
-  max_length: number | null
-  validation_rules: Record<string, unknown>
-}
 
-interface TemplateElement {
-  id: string
-  element_type: string
-  role: string | null
-  variable_id: string | null
-  asset_id: string | null
-  x: number
-  y: number
-  width: number
-  height: number
-  rotation: number
-  opacity: number
-  z_index: number
-  visible: boolean
-  locked: boolean
-  content: string | null
-  style: Record<string, unknown>
-  metadata: Record<string, unknown>
-}
 
 interface Props {
   template: TemplateWithRelations

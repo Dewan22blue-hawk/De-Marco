@@ -36,7 +36,7 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
     { href: '/dashboard/assets', label: 'Asset Library', icon: FolderKanban },
     { href: '/dashboard/templates', label: 'AI Templates', icon: Sparkles },
-    { href: '/dashboard/settings/brand', label: 'Brand Kit', icon: Palette },
+    { href: '/dashboard/brand', label: 'Brand Kit', icon: Palette },
     { href: '/dashboard/settings/members', label: 'Team Access', icon: Users },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: true },
   ];

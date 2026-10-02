@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import React, { useState, useCallback, useEffect, useTransition } from "react"
@@ -5,7 +6,7 @@ import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { 
   Search, ImagePlus, FileText, ChevronDown, LayoutGrid, LayoutList, 
-  Copy, Archive, Trash2, Layout, CheckSquare, Square, X, Loader2
+  Copy, Archive, Trash2, Layout, CheckSquare, Square, X, Loader2, Pencil
 } from "lucide-react"
 import { archiveTemplate, cloneTemplate, deleteTemplate } from "./actions"
 import { cn } from "@/lib/utils"
@@ -59,6 +60,7 @@ export function TemplateLibraryClient({
 
   // Sync templates when initialTemplates changes (server revalidation)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTemplates(initialTemplates)
   }, [initialTemplates])
 
@@ -84,7 +86,7 @@ export function TemplateLibraryClient({
   }, [searchQuery, search, updateUrl])
 
   const handleClone = async (template: Template) => {
-    const tempId = 'temp-' + Date.now()
+    const tempId = 'temp-' + crypto.randomUUID()
     const cloned: Template = { ...template, id: tempId, name: `${template.name} - Copy`, created_at: new Date().toISOString(), usage_count: 0 }
     setTemplates(prev => [cloned, ...prev])
     try {
@@ -168,7 +170,7 @@ export function TemplateLibraryClient({
         <div>
           <h1 className="text-headline-lg font-headline-lg font-bold text-on-surface">Templates</h1>
           <p className="text-on-surface-variant mt-1 text-body-md">
-            {totalCount} templates &middot; Reusable blueprints for fast production.
+            {totalCount} templates · Reusable blueprints for fast production.
           </p>
         </div>
         <Link
@@ -198,7 +200,7 @@ export function TemplateLibraryClient({
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center bg-surface-container-lowest p-3 rounded-2xl border border-outline-variant/30 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline size-5" aria-hidden="true" />
           <input
@@ -206,7 +208,7 @@ export function TemplateLibraryClient({
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-on-surface text-sm transition-all"
+            className="w-full pl-11 pr-10 py-2.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-on-surface text-sm transition-all shadow-sm"
             aria-label="Search templates"
           />
           {isPending && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary size-4 animate-spin" />}
@@ -217,7 +219,7 @@ export function TemplateLibraryClient({
             <select
               value={selectedType}
               onChange={(e) => updateUrl({ type: e.target.value })}
-              className="w-full sm:w-auto pl-4 pr-10 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-on-surface appearance-none text-sm font-medium transition-all"
+              className="w-full sm:w-auto pl-4 pr-10 py-2.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-on-surface appearance-none text-sm font-medium transition-all shadow-sm cursor-pointer"
               aria-label="Filter by Type"
             >
               {templateTypes.map((t) => (
@@ -227,17 +229,17 @@ export function TemplateLibraryClient({
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-outline size-4 pointer-events-none" />
           </div>
 
-          <div className="flex bg-surface-container-low rounded-xl p-1 shrink-0 border border-outline-variant/30">
+          <div className="flex bg-surface-container-lowest rounded-2xl p-1 shrink-0 border border-outline-variant/30 shadow-sm">
             <button
               onClick={() => updateUrl({ view: "grid" })}
-              className={cn("p-1.5 rounded-lg transition-colors", viewMode === "grid" ? "bg-white dark:bg-slate-800 shadow text-primary" : "text-on-surface-variant hover:text-on-surface")}
+              className={cn("p-1.5 rounded-xl transition-colors", viewMode === "grid" ? "bg-primary/10 shadow-sm text-primary" : "text-on-surface-variant hover:text-on-surface")}
               aria-label="Grid View"
             >
               <LayoutGrid size={18} />
             </button>
             <button
               onClick={() => updateUrl({ view: "list" })}
-              className={cn("p-1.5 rounded-lg transition-colors", viewMode === "list" ? "bg-white dark:bg-slate-800 shadow text-primary" : "text-on-surface-variant hover:text-on-surface")}
+              className={cn("p-1.5 rounded-xl transition-colors", viewMode === "list" ? "bg-primary/10 shadow-sm text-primary" : "text-on-surface-variant hover:text-on-surface")}
               aria-label="List View"
             >
               <LayoutList size={18} />
@@ -279,6 +281,7 @@ export function TemplateLibraryClient({
                 onToggleSelect={() => toggleSelect(template.id)}
                 onClone={() => handleClone(template)}
                 onArchive={() => handleArchive(template.id)}
+                onDelete={() => handleDelete(template.id)}
               />
             ))}
           </div>
@@ -345,6 +348,7 @@ function TemplateCard({
   onToggleSelect: () => void
   onClone: () => void
   onArchive: () => void
+  onDelete: () => void
 }) {
   const thumbUrl = getThumbnailUrl(template.thumbnail?.storage_path)
   
@@ -409,11 +413,14 @@ function TemplateCard({
         </div>
 
         <div className="absolute top-2 right-4 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+           <Link href={`/dashboard/templates/${template.id}/edit`} className="p-2 bg-surface text-on-surface shadow-md border border-outline-variant/20 rounded-xl hover:bg-primary hover:text-white transition-colors" aria-label="Edit Template" title="Edit">
+             <Pencil className="w-4 h-4" />
+           </Link>
            <button onClick={(e) => { e.preventDefault(); onClone(); }} className="p-2 bg-surface text-on-surface shadow-md border border-outline-variant/20 rounded-xl hover:bg-primary hover:text-white transition-colors" aria-label="Clone Template" title="Clone">
              <Copy className="w-4 h-4" />
            </button>
-           <button onClick={(e) => { e.preventDefault(); onArchive(); }} className="p-2 bg-surface text-error shadow-md border border-outline-variant/20 rounded-xl hover:bg-error hover:text-white transition-colors" aria-label="Archive Template" title="Archive">
-             <Archive className="w-4 h-4" />
+           <button onClick={(e) => { e.preventDefault(); onDelete(); }} className="p-2 bg-surface text-error shadow-md border border-outline-variant/20 rounded-xl hover:bg-error hover:text-white transition-colors" aria-label="Delete Template" title="Delete">
+             <Trash2 className="w-4 h-4" />
            </button>
         </div>
       </div>
@@ -471,11 +478,11 @@ function TemplateRow({
         {template.width}×{template.height}
       </div>
       <div className="col-span-6 sm:col-span-3 md:col-span-2 lg:col-span-2 flex items-center justify-end sm:justify-center gap-2">
+         <Link href={`/dashboard/templates/${template.id}/edit`} className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-xl transition-colors" aria-label="Edit" title="Edit">
+           <Pencil className="w-4 h-4" />
+         </Link>
          <button onClick={onClone} className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-xl transition-colors" aria-label="Clone" title="Clone">
            <Copy className="w-4 h-4" />
-         </button>
-         <button onClick={onArchive} className="p-2 text-on-surface-variant hover:text-orange-500 hover:bg-orange-500/10 rounded-xl transition-colors" aria-label="Archive" title="Archive">
-           <Archive className="w-4 h-4" />
          </button>
          <button onClick={onDelete} className="p-2 text-on-surface-variant hover:text-error hover:bg-error/10 rounded-xl transition-colors" aria-label="Delete" title="Delete">
            <Trash2 className="w-4 h-4" />
