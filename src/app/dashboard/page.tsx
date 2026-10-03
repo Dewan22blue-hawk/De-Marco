@@ -151,7 +151,7 @@ export default async function DashboardPage() {
           </div>
           <div className="pt-4 mt-4 border-t border-outline-variant/20 flex items-center justify-between">
             <span className="text-body-sm font-body-sm text-outline">12 awaiting review</span>
-            <a className="text-secondary font-headline-sm text-body-sm font-semibold flex items-center gap-1 group-hover:gap-1.5 transition-all" href="#ai-studio">
+            <a className="text-secondary font-headline-sm text-body-sm font-semibold flex items-center gap-1 group-hover:gap-1.5 transition-all" href="/dashboard/designs">
               <span className="">View</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </a>

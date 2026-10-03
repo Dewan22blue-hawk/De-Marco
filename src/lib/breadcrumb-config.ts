@@ -2,6 +2,8 @@ export const BREADCRUMB_DICTIONARY: Record<string, string> = {
   dashboard: 'Dashboard',
   assets: 'Asset Library',
   templates: 'AI Templates',
+  designs: 'My Designs',
+  studio: 'Creative Studio',
   settings: 'Pengaturan',
   members: 'Anggota Tim',
   brand: 'Kit Merek',

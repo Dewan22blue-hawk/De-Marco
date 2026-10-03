@@ -19,7 +19,9 @@ export function FontPicker({
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setInputValue(value)
+    if (value !== inputValue) {
+      setInputValue(value)
+    }
   }, [value])
 
   useEffect(() => {

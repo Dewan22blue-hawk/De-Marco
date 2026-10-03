@@ -34,8 +34,12 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
   // Navigation Items
   const navItems = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
+    { href: '/dashboard/campaigns', label: 'Campaigns', icon: FolderKanban },
+    { href: '/dashboard/contents', label: 'Content Library', icon: Sparkles },
+    { href: '/dashboard/calendar', label: 'Calendar', icon: LayoutDashboard },
     { href: '/dashboard/assets', label: 'Asset Library', icon: FolderKanban },
     { href: '/dashboard/templates', label: 'AI Templates', icon: Sparkles },
+    { href: '/dashboard/designs', label: 'My Designs', icon: Palette },
     { href: '/dashboard/brand', label: 'Brand Kit', icon: Palette },
     { href: '/dashboard/settings/members', label: 'Team Access', icon: Users },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: true },
