@@ -4,6 +4,9 @@ import { useState, useTransition } from "react"
 import { upsertBrandKit } from "./actions"
 import { TagsInput } from "@/components/ui/tags-input"
 import { FontPicker } from "@/components/ui/font-picker"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { AssetPickerModal, type Asset } from "@/components/dashboard/assets/asset-picker-modal"
 import { createClient } from "@/lib/supabase/client"
 import { ImagePlus, X, Copy, Check, Info } from "lucide-react"
@@ -117,11 +120,10 @@ export function BrandKitForm({ initialData, organizationId }: { initialData: Rec
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-semibold text-on-surface">Brand Name</label>
-              <input 
+              <Input 
                 value={name} 
                 onChange={e => setName(e.target.value)}
                 required 
-                className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface"
               />
             </div>
             
@@ -162,32 +164,29 @@ export function BrandKitForm({ initialData, organizationId }: { initialData: Rec
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-on-surface">Tagline</label>
-              <input 
+              <Input 
                 value={tagline} 
                 onChange={e => setTagline(e.target.value)}
                 placeholder="e.g. Just Do It"
-                className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface"
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-on-surface">Preferred Call-to-Action</label>
-              <input 
+              <Input 
                 value={preferredCta} 
                 onChange={e => setPreferredCta(e.target.value)}
                 placeholder="e.g. Beli Sekarang, Kunjungi Kami"
-                className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface"
               />
             </div>
             
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-semibold text-on-surface">Description / Elevator Pitch</label>
-              <textarea 
+              <Textarea 
                 value={description} 
                 onChange={e => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Gambaran umum tentang brand..."
-                className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface resize-y"
               />
             </div>
           </div>
@@ -222,13 +221,15 @@ export function BrandKitForm({ initialData, organizationId }: { initialData: Rec
         <div className="clay-surface rounded-3xl p-6 sm:p-8 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-headline-sm font-bold text-on-surface">Brand Colors</h3>
-            <button 
+            <Button 
               type="button" 
+              variant="outline"
+              size="sm"
               onClick={handleAddColor}
-              className="px-4 py-2 rounded-xl bg-primary-container text-on-primary-container hover:bg-primary-container/80 text-sm font-semibold transition-colors flex items-center gap-2"
+              className="flex items-center gap-2"
             >
               Add Color
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -331,20 +332,14 @@ export function BrandKitForm({ initialData, organizationId }: { initialData: Rec
         </div>
 
         <div className="flex justify-end pt-4">
-          <button 
+          <Button 
             type="submit" 
-            disabled={isPending}
-            className="clay-button-primary px-8 py-3 rounded-xl text-white font-bold flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-95 shadow-lg"
+            variant="default"
+            isLoading={isPending}
+            className="px-8 font-bold flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-lg"
           >
-            {isPending ? (
-              <>
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                Saving Changes...
-              </>
-            ) : (
-              "Save Brand Kit"
-            )}
-          </button>
+            {isPending ? "Saving Changes..." : "Save Brand Kit"}
+          </Button>
         </div>
       </form>
 

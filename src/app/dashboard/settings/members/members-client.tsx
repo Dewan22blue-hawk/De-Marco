@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { inviteMember, removeMember, updateMemberRole } from "./actions"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 export function MembersClient({ members, organizationId, availableRoles }: { members: any[], organizationId: string, availableRoles: any[] }) {
   const [isPending, startTransition] = useTransition()
@@ -56,13 +58,14 @@ export function MembersClient({ members, organizationId, availableRoles }: { mem
             Manage your team members and their access levels.
           </p>
         </div>
-        <button 
+        <Button 
           onClick={() => setIsInviteModalOpen(true)}
-          className="clay-button-primary px-4 py-2.5 rounded-xl text-white font-headline-sm text-body-md font-semibold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
+          variant="default"
+          className="font-semibold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
         >
           <span className="material-symbols-outlined text-[18px]">person_add</span>
           Invite Member
-        </button>
+        </Button>
       </div>
 
       <div className="border border-outline-variant/30 rounded-2xl overflow-hidden shadow-sm bg-surface">
@@ -153,12 +156,11 @@ export function MembersClient({ members, organizationId, availableRoles }: { mem
               )}
               <div className="space-y-2">
                 <label className="text-label-code-sm font-semibold text-on-surface">Email Address</label>
-                <input 
+                <Input 
                   type="email" 
                   name="email" 
                   required 
                   placeholder="colleague@example.com"
-                  className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
                 />
               </div>
               <div className="space-y-2">
@@ -173,13 +175,14 @@ export function MembersClient({ members, organizationId, availableRoles }: { mem
                 </select>
               </div>
               <div className="flex justify-end pt-2">
-                <button 
+                <Button 
                   type="submit" 
-                  disabled={isPending}
-                  className="clay-button-primary px-6 py-2.5 rounded-xl text-white font-semibold flex items-center gap-2 disabled:opacity-70 transition-all"
+                  variant="default"
+                  isLoading={isPending}
+                  className="font-semibold flex items-center gap-2 transition-all"
                 >
                   {isPending ? 'Sending...' : 'Send Invite'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

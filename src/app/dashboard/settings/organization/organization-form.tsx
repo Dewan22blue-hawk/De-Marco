@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react"
 import { updateOrganization } from "./actions"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 
 export function OrganizationForm({ initialData }: { initialData: { id: string; [key: string]: string | null | undefined } }) {
   const [isPending, startTransition] = useTransition()
@@ -39,60 +42,54 @@ export function OrganizationForm({ initialData }: { initialData: { id: string; [
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Organization Name</label>
-          <input 
+          <Input 
             type="text" 
             name="name"
             defaultValue={initialData.name || ""}
             required
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Legal Name</label>
-          <input 
+          <Input 
             type="text" 
             name="legal_name"
             defaultValue={initialData.legal_name || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
 
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Industry</label>
-          <input 
+          <Input 
             type="text" 
             name="industry"
             defaultValue={initialData.industry || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Website</label>
-          <input 
+          <Input 
             type="url" 
             name="website"
             defaultValue={initialData.website || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
             placeholder="https://"
           />
         </div>
 
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Contact Email</label>
-          <input 
+          <Input 
             type="email" 
             name="email"
             defaultValue={initialData.email || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Phone Number</label>
-          <input 
+          <Input 
             type="text" 
             name="phone"
             defaultValue={initialData.phone || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
       </div>
@@ -103,62 +100,50 @@ export function OrganizationForm({ initialData }: { initialData: { id: string; [
 
       <div className="space-y-2">
         <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Street Address</label>
-        <textarea 
+        <Textarea 
           name="address"
           defaultValue={initialData.address || ""}
           rows={3}
-          className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md resize-none"
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">City</label>
-          <input 
+          <Input 
             type="text" 
             name="city"
             defaultValue={initialData.city || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Province / State</label>
-          <input 
+          <Input 
             type="text" 
             name="province"
             defaultValue={initialData.province || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Postal Code</label>
-          <input 
+          <Input 
             type="text" 
             name="postal_code"
             defaultValue={initialData.postal_code || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
       </div>
 
       <div className="flex justify-end pt-4">
-        <button 
+        <Button 
           type="submit" 
-          disabled={isPending}
-          className="clay-button-primary px-6 py-2.5 rounded-xl text-white font-headline-sm text-body-md font-semibold flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+          variant="default"
+          isLoading={isPending}
+          className="font-semibold flex items-center gap-2"
         >
-          {isPending ? (
-            <>
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-              Saving...
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-[18px]">save</span>
-              Save Changes
-            </>
-          )}
-        </button>
+          {!isPending && <span className="material-symbols-outlined text-[18px]">save</span>}
+          {isPending ? "Saving..." : "Save Changes"}
+        </Button>
       </div>
     </form>
   )

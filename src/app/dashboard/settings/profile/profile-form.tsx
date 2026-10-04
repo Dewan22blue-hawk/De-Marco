@@ -3,6 +3,9 @@
 
 import { useState, useTransition } from "react"
 import { updateProfile } from "./actions"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 
 export function ProfileForm({ initialData, email }: { initialData: { [key: string]: string | null | undefined }, email: string }) {
   const [isPending, startTransition] = useTransition()
@@ -45,13 +48,14 @@ export function ProfileForm({ initialData, email }: { initialData: { [key: strin
           />
         </div>
         <div className="flex flex-col gap-2">
-          <button 
+          <Button 
             type="button" 
+            variant="outline"
+            size="sm"
             onClick={() => alert("Avatar upload will be integrated with the Asset Manager in the next phase.")}
-            className="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high font-body-sm font-semibold text-on-surface transition-colors border border-outline-variant/30"
           >
             Change Avatar
-          </button>
+          </Button>
           <span className="text-[11px] text-outline font-body-sm">JPG, GIF or PNG. 1MB max.</span>
         </div>
       </div>
@@ -61,51 +65,46 @@ export function ProfileForm({ initialData, email }: { initialData: { [key: strin
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Full Name</label>
-          <input 
+          <Input 
             type="text" 
             name="full_name"
             defaultValue={initialData.full_name || ""}
             required
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Email Address</label>
-          <input 
+          <Input 
             type="email" 
             defaultValue={email}
             disabled
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 outline-none text-on-surface-variant font-body-md opacity-60 cursor-not-allowed"
           />
         </div>
 
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Job Title</label>
-          <input 
+          <Input 
             type="text" 
             name="job_title"
             defaultValue={initialData.job_title || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
         <div className="space-y-2">
           <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Phone Number</label>
-          <input 
+          <Input 
             type="text" 
             name="phone"
             defaultValue={initialData.phone || ""}
-            className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md"
           />
         </div>
       </div>
 
       <div className="space-y-2">
         <label className="text-label-code-sm font-label-code-sm font-semibold text-on-surface">Bio</label>
-        <textarea 
+        <Textarea 
           name="bio"
           defaultValue={initialData.bio || ""}
           rows={4}
-          className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface font-body-md resize-none"
         />
       </div>
 
@@ -137,23 +136,15 @@ export function ProfileForm({ initialData, email }: { initialData: { [key: strin
       </div>
 
       <div className="flex justify-end pt-4">
-        <button 
+        <Button 
           type="submit" 
-          disabled={isPending}
-          className="clay-button-primary px-6 py-2.5 rounded-xl text-white font-headline-sm text-body-md font-semibold flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+          variant="default"
+          isLoading={isPending}
+          className="font-semibold flex items-center gap-2"
         >
-          {isPending ? (
-            <>
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-              Saving...
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-[18px]">save</span>
-              Save Profile
-            </>
-          )}
-        </button>
+          {!isPending && <span className="material-symbols-outlined text-[18px]">save</span>}
+          {isPending ? "Saving..." : "Save Profile"}
+        </Button>
       </div>
     </form>
   )

@@ -1,15 +1,30 @@
-version: '3.8'
-
 services:
-  redis:
-    image: redis:7-alpine
-    container_name: demarco-redis
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-dev
     ports:
-      - "6379:6379"
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: Asia/Jakarta
+      TZ: Asia/Jakarta
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
+      # Accessible from inside the n8n container to reach the Next.js dev
+      # server running on the host machine.
+      DERALY_API_URL: http://host.docker.internal:3000
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
     volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
+      - n8n_data:/home/node/.n8n
+      - ./integrations/n8n/workflows:/home/node/import/workflows:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
 volumes:
-  redis_data:
+  n8n_data:

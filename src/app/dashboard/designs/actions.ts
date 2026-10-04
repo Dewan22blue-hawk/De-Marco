@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { createAuditLog } from "@/lib/audit"
 import { getTemplate } from "@/app/dashboard/templates/actions"
+import { resolveTemplateVariablesWithAI } from "@/lib/ai/service"
 
 export async function listDesigns(opts?: { 
   search?: string; 
@@ -397,3 +398,43 @@ export async function updateDesignElements(designId: string, elements: any[]) {
   revalidatePath(`/dashboard/designs/${designId}`)
   return { success: true }
 }
+
+export async function magicFillDesignVariables(templateId: string, context: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
+  if (!profile?.default_organization_id) throw new Error("No organization assigned")
+
+  const template = await getTemplate(templateId)
+  if (!template) throw new Error("Template not found")
+
+  // Get active brand kit
+  const { data: brandKit } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("organization_id", profile.default_organization_id)
+    .eq("is_active", true)
+    .limit(1)
+    .single()
+
+  // Get assets for images
+  const { data: assets } = await supabase
+    .from("assets")
+    .select("id, name, description, tags, asset_type")
+    .eq("organization_id", profile.default_organization_id)
+    .eq("asset_type", "image")
+    .limit(50)
+
+  const variableValues = await resolveTemplateVariablesWithAI({
+    organization_id: profile.default_organization_id,
+    template,
+    brandKit,
+    assets: assets || [],
+    context
+  })
+
+  return variableValues
+}
+

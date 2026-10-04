@@ -10,6 +10,8 @@ import {
 } from "lucide-react"
 import { archiveTemplate, cloneTemplate, deleteTemplate } from "./actions"
 import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
+import { CustomSelect } from "@/components/ui/custom-select"
 
 interface Template {
   id: string
@@ -203,30 +205,24 @@ export function TemplateLibraryClient({
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline size-5" aria-hidden="true" />
-          <input
+          <Input
             type="search"
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-10 py-2.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-on-surface text-sm transition-all shadow-sm"
+            className="w-full pl-11 pr-10"
             aria-label="Search templates"
           />
           {isPending && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary size-4 animate-spin" />}
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-none">
-            <select
+          <div className="w-full sm:w-40 z-10">
+            <CustomSelect
               value={selectedType}
-              onChange={(e) => updateUrl({ type: e.target.value })}
-              className="w-full sm:w-auto pl-4 pr-10 py-2.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-on-surface appearance-none text-sm font-medium transition-all shadow-sm cursor-pointer"
-              aria-label="Filter by Type"
-            >
-              {templateTypes.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-outline size-4 pointer-events-none" />
+              onChange={(val) => updateUrl({ type: val })}
+              options={templateTypes}
+            />
           </div>
 
           <div className="flex bg-surface-container-lowest rounded-2xl p-1 shrink-0 border border-outline-variant/30 shadow-sm">

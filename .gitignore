@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 supabase/.temp/
+
+# n8n local runtime data
+/n8n-data/
+n8n_export/

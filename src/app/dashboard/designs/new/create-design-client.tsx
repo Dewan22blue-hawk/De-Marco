@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { LayoutTemplate, ImagePlus, CheckCircle2, ChevronRight, Wand2 } from "lucide-react"
 import { AssetPickerModal, type Asset } from "@/components/dashboard/assets/asset-picker-modal"
-import { createDesignFromTemplate } from "../actions"
+import { createDesignFromTemplate, magicFillDesignVariables } from "../actions"
 
 export function CreateDesignClient({ templates, brandKit }: { templates: any[], brandKit: any }) {
   const router = useRouter()
@@ -23,6 +23,11 @@ export function CreateDesignClient({ templates, brandKit }: { templates: any[], 
 
   // Step 3: Name
   const [designName, setDesignName] = useState("")
+
+  // Magic Fill State
+  const [isMagicFilling, setIsMagicFilling] = useState(false)
+  const [magicPrompt, setMagicPrompt] = useState("")
+  const [showMagicPrompt, setShowMagicPrompt] = useState(false)
 
   const getPublicUrl = (asset: any) => {
     if (!asset) return null
@@ -67,6 +72,21 @@ export function CreateDesignClient({ templates, brandKit }: { templates: any[], 
         setError(err.message || "Failed to generate design")
       }
     })
+  }
+
+  const handleMagicFill = async () => {
+    if (!selectedTemplate || !magicPrompt.trim()) return
+    setIsMagicFilling(true)
+    setError(null)
+    try {
+      const generatedValues = await magicFillDesignVariables(selectedTemplate.id, magicPrompt)
+      setVariableValues(prev => ({ ...prev, ...generatedValues }))
+      setShowMagicPrompt(false)
+    } catch (err: any) {
+      setError(err.message || "Failed to perform Magic Fill")
+    } finally {
+      setIsMagicFilling(false)
+    }
   }
 
   return (
@@ -140,6 +160,40 @@ export function CreateDesignClient({ templates, brandKit }: { templates: any[], 
             <div>
               <h2 className="text-headline-sm font-bold text-on-surface">{selectedTemplate.name}</h2>
               <p className="text-sm text-on-surface-variant">Fill in the template variables below.</p>
+            </div>
+            
+            <div className="ml-auto relative">
+              <button 
+                onClick={() => setShowMagicPrompt(!showMagicPrompt)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary font-bold rounded-lg hover:bg-primary/20 transition-colors border border-primary/20"
+              >
+                <Wand2 size={16} />
+                ✨ AI Magic Fill
+              </button>
+              
+              {showMagicPrompt && (
+                <div className="absolute right-0 top-full mt-2 w-80 p-4 bg-surface rounded-2xl shadow-xl border border-outline-variant/30 z-50">
+                  <h4 className="text-sm font-bold text-on-surface mb-2">Campaign Brief</h4>
+                  <textarea 
+                    value={magicPrompt}
+                    onChange={e => setMagicPrompt(e.target.value)}
+                    placeholder="E.g. A summer sale promotion for our new sneaker collection. Give a 50% discount call to action."
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm bg-surface-container-lowest border border-outline-variant/50 rounded-lg outline-none focus:border-primary mb-3"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setShowMagicPrompt(false)} className="px-3 py-1.5 text-xs font-bold text-on-surface-variant hover:bg-surface-container rounded-lg">Cancel</button>
+                    <button 
+                      onClick={handleMagicFill}
+                      disabled={isMagicFilling || !magicPrompt.trim()}
+                      className="px-3 py-1.5 text-xs font-bold bg-primary text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isMagicFilling ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> : null}
+                      Fill Now
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

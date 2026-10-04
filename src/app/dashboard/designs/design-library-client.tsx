@@ -7,6 +7,8 @@ import { Search, LayoutGrid, List as ListIcon, Filter, Copy, Archive, Trash2, Pl
 import { motion, AnimatePresence } from "framer-motion"
 import { duplicateDesign, archiveDesign, deleteDesign } from "./actions"
 import { createClient } from "@/lib/supabase/client"
+import { Input } from "@/components/ui/input"
+import { CustomSelect } from "@/components/ui/custom-select"
 
 export function DesignLibraryClient({ 
   initialDesigns, 
@@ -106,39 +108,43 @@ export function DesignLibraryClient({
         <div className="flex items-center gap-4 w-full md:w-auto flex-1">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
-            <input 
+            <Input 
               type="text" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search designs..." 
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-on-surface"
+              className="w-full pl-10 pr-4"
             />
           </div>
           
-          <select 
-            value={searchParams.get("status") || "all"} 
-            onChange={(e) => setParam("status", e.target.value)}
-            className="px-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant/50 outline-none text-on-surface cursor-pointer focus:border-primary hidden sm:block"
-          >
-            <option value="all">All Status</option>
-            <option value="draft">Drafts</option>
-            <option value="review">In Review</option>
-            <option value="approved">Approved</option>
-            <option value="archived">Archived</option>
-          </select>
+          <div className="w-40 hidden sm:block">
+            <CustomSelect 
+              value={searchParams.get("status") || "all"} 
+              onChange={(val) => setParam("status", val)}
+              options={[
+                { value: "all", label: "All Status" },
+                { value: "draft", label: "Drafts" },
+                { value: "review", label: "In Review" },
+                { value: "approved", label: "Approved" },
+                { value: "archived", label: "Archived" }
+              ]}
+            />
+          </div>
 
-          <select 
-            value={searchParams.get("type") || "all"} 
-            onChange={(e) => setParam("type", e.target.value)}
-            className="px-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant/50 outline-none text-on-surface cursor-pointer focus:border-primary hidden lg:block"
-          >
-            <option value="all">All Types</option>
-            <option value="flyer">Flyer</option>
-            <option value="poster">Poster</option>
-            <option value="social_post">Social Post</option>
-            <option value="social_story">Story</option>
-            <option value="banner">Banner</option>
-          </select>
+          <div className="w-40 hidden lg:block">
+            <CustomSelect 
+              value={searchParams.get("type") || "all"} 
+              onChange={(val) => setParam("type", val)}
+              options={[
+                { value: "all", label: "All Types" },
+                { value: "flyer", label: "Flyer" },
+                { value: "poster", label: "Poster" },
+                { value: "social_post", label: "Social Post" },
+                { value: "social_story", label: "Story" },
+                { value: "banner", label: "Banner" }
+              ]}
+            />
+          </div>
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">

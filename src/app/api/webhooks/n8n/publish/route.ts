@@ -1,0 +1,124 @@
+import { NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
+
+// Secure Service Role Client for Webhook (Bypasses RLS)
+const getAdminClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+// Ensure the request is authorized via Header Secret
+const isAuthorized = (request: Request) => {
+  const authHeader = request.headers.get("authorization")
+  const expectedToken = process.env.N8N_WEBHOOK_SECRET
+  
+  if (!expectedToken) {
+    console.warn("N8N_WEBHOOK_SECRET is not configured!")
+    return false
+  }
+
+  return authHeader === `Bearer ${expectedToken}`
+}
+
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const supabase = getAdminClient()
+
+  // Fetch all scheduled content that should be published by now
+  const { data: scheduledEvents, error } = await supabase
+    .from("content_calendar")
+    .select(`
+      id, 
+      organization_id, 
+      platform, 
+      scheduled_at,
+      content:contents(id, title, body, status, cta, hashtags),
+      campaign:campaigns(id, name)
+    `)
+    .eq("status", "scheduled")
+    .lte("scheduled_at", new Date().toISOString())
+
+  if (error) {
+    console.error("Failed to fetch scheduled events:", error)
+    return NextResponse.json({ error: "Database error" }, { status: 500 })
+  }
+
+  return NextResponse.json({ data: scheduledEvents })
+}
+
+export async function POST(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  try {
+    const payload = await request.json()
+    const { eventId, contentId, organizationId, status, publishedUrl, error_note } = payload
+
+    if (!eventId || !status || !contentId || !organizationId) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    const supabase = getAdminClient()
+
+    if (status === "success") {
+      // Update calendar status
+      await supabase
+        .from("content_calendar")
+        .update({ status: "published" })
+        .eq("id", eventId)
+
+      // Update contents status
+      await supabase
+        .from("contents")
+        .update({ 
+          status: "published", 
+          published_at: new Date().toISOString(),
+          metadata: { published_url: publishedUrl }
+        })
+        .eq("id", contentId)
+
+      // Log to audit
+      await supabase.from("audit_logs").insert({
+        organization_id: organizationId,
+        table_name: "contents",
+        record_id: contentId,
+        action: "update",
+        new_data: { status: "published" },
+        user_agent: "n8n-webhook-service"
+      })
+
+      return NextResponse.json({ success: true })
+
+    } else {
+      // Update calendar status to failed
+      await supabase
+        .from("content_calendar")
+        .update({ 
+          status: "failed",
+          notes: error_note || "Publishing failed via n8n"
+        })
+        .eq("id", eventId)
+
+      // Log to audit
+      await supabase.from("audit_logs").insert({
+        organization_id: organizationId,
+        table_name: "content_calendar",
+        record_id: eventId,
+        action: "update",
+        new_data: { status: "failed", error_note },
+        user_agent: "n8n-webhook-service"
+      })
+
+      return NextResponse.json({ success: true, status: "failed" })
+    }
+  } catch (err) {
+    console.error("Webhook processing error:", err)
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+  }
+}

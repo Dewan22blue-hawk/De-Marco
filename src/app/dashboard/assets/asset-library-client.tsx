@@ -7,6 +7,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { deleteAsset, renameAsset, updateAssetTags, listAssets, bulkDeleteAssets, bulkUpdateAssets } from "./actions"
 import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel, AlertModalAction } from "@/components/ui/alert-modal"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 interface Asset {
   id: string
@@ -235,13 +237,13 @@ export function AssetLibraryClient({
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline size-5" />
-            <input
+            <Input
               type="search"
               placeholder="Search assets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Search assets"
-              className="w-full px-12 py-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 focus:border-primary focus:outline-none text-on-surface"
+              className="w-full pl-12 pr-12"
             />
             {isSearching && <div className="absolute right-12 top-1/2 -translate-y-1/2 text-primary"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div></div>}
             {searchQuery && !isSearching && (
@@ -348,19 +350,22 @@ export function AssetLibraryClient({
                 ]}
               />
             </div>
-            <button 
+            <Button 
               onClick={() => { setBulkAction("move"); handleBulkAction() }}
               disabled={!bulkTargetCategory}
-              className="px-4 py-2 rounded-xl bg-surface border border-outline-variant/30 text-sm font-medium hover:bg-surface-container disabled:opacity-50 transition-colors"
+              variant="outline"
+              size="sm"
             >
               Move
-            </button>
-            <button 
+            </Button>
+            <Button 
               onClick={() => setBulkAction("delete")}
-              className="px-4 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-medium hover:bg-red-100 transition-colors"
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border-red-200"
             >
               Delete
-            </button>
+            </Button>
             <button onClick={() => setSelectedIds(new Set())} className="p-2 text-outline hover:text-on-surface ml-2" aria-label="Cancel bulk actions">
               <X size={18} />
             </button>
@@ -388,7 +393,7 @@ export function AssetLibraryClient({
               : "Upload your first asset to get started."}
           </p>
           {(searchQuery || selectedCat || selectedAssetType) ? (
-            <button onClick={() => handleFilterChange({ q: "", category: "", type: "" })} className="clay-button-primary px-6 py-2.5 rounded-xl text-white font-medium">Clear filters</button>
+            <Button onClick={() => handleFilterChange({ q: "", category: "", type: "" })} variant="default">Clear filters</Button>
           ) : (
             <AssetUploader categories={categories} />
           )}
@@ -416,14 +421,14 @@ export function AssetLibraryClient({
           </div>
           {assets.length < totalCount && (
             <div className="flex justify-center mt-8 pb-8">
-              <button 
+              <Button 
                 onClick={handleLoadMore} 
                 disabled={isLoadingMore}
-                className="px-6 py-3 rounded-xl bg-surface-container-high border border-outline-variant/30 font-medium text-on-surface hover:bg-surface-container-highest transition-colors disabled:opacity-50 flex items-center gap-2"
+                variant="outline"
+                isLoading={isLoadingMore}
               >
-                {isLoadingMore ? <div className="w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin"></div> : null}
-                {isLoadingMore ? "Loading..." : `Load more (Showing ${assets.length} of ${totalCount})`}
-              </button>
+                {!isLoadingMore && `Load more (Showing ${assets.length} of ${totalCount})`}
+              </Button>
             </div>
           )}
         </>
