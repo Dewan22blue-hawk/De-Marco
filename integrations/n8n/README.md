@@ -59,10 +59,13 @@ Akses UI: http://localhost:5678 (login `admin` / `N8N_BASIC_AUTH_PASSWORD`).
 Alur workflow:
 
 1. **Schedule Trigger** — cron `*/15 * * * *` (tiap 15 menit)
-2. **Fetch Scheduled Content** — `GET /api/webhooks/n8n/publish`
+2. **Fetch Scheduled Content** — `GET /api/webhooks/n8n/publish`. Meng-claim post yang due dengan status `queued` (Atomic Queue).
 3. **Split Into Items** — pecah array `data` menjadi item per jadwal
-4. **Callback to Deraly** — `POST /api/webhooks/n8n/publish` untuk menandai
-   `content_calendar` → `published` dan `contents` → `published`
+4. **Has Content?** — Filter post yang tidak memiliki konten (kosong)
+5. **Switch By Platform** — Routing berdasarkan platform
+6. **Update Status** — Callback ke `POST /api/webhooks/n8n/publish` untuk menandai hasil (berhasil `published` atau `failed`)
+
+*Catatan: Node publikasi sosial media secara langsung belum diimplementasikan. Untuk tahap MVP ini, webhook hanya akan menandai status (Stub) dan menggunakan URL placeholder. Integrasi nyata dengan Graph API / Platform API lainnya adalah pada tahap berikutnya.*
 
 ## 5. Kontrak Webhook
 

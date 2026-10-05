@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { createAuditLog } from "@/lib/audit"
 import { runAITask } from "@/lib/ai/service"
+import { z } from "zod"
+import { GeneratedContentSchema } from "@/schemas/ai-content"
 
 export async function listContents(opts?: { search?: string; status?: string; limit?: number; offset?: number }) {
   const supabase = await createClient()
@@ -73,66 +75,64 @@ export async function createContent(payload: any) {
   return { success: true, content }
 }
 
-export async function autoGenerateContent(topic: string) {
+export async function autoGenerateContent(topic: string, contentType: string = "post") {
   // Legacy function: generates and saves as draft immediately
-  const generated = await generateContentWithAI(topic, "post")
-  
-  return await createContent({
-    title: generated.title || `Generated: ${topic.substring(0, 30)}...`,
-    body: generated.body,
-    platform: "other",
-    content_type: "post",
-    status: "draft"
-  });
+  const { content } = await generateContentWithAI(topic, contentType)
+  return { success: true, content };
 }
 
-export async function generateContentWithAI(topic: string, contentType: string = "post") {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
+export async function generateContentWithAI(
+  topic: string,
+  contentType: string = "post",
+  campaignId?: string,
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
 
-  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
-  if (!profile?.default_organization_id) throw new Error("No organization assigned")
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("default_organization_id")
+    .eq("id", user.id)
+    .single();
 
-  // Get active brand kit for context
-  const { data: brand } = await supabase
-    .from("brands")
-    .select("*")
-    .eq("organization_id", profile.default_organization_id)
-    .eq("is_active", true)
-    .limit(1)
-    .single()
+  if (!profile?.default_organization_id) throw new Error("No organization assigned");
+  const organizationId = profile.default_organization_id;
 
-  const prompt = `Generate a ${contentType} about: ${topic}. 
-Return ONLY a valid JSON object with the following keys:
-- "title": A catchy title (max 50 chars)
-- "body": The main content text
-- "hashtags": A string of relevant hashtags
-- "cta": A call to action sentence
-- "tone": The tone used (e.g. Professional, Casual)
-Do not include markdown formatting or backticks around the JSON.`;
-  
-  const generatedText = await runAITask({
-    organization_id: profile.default_organization_id,
+  const prompt = `Generate a ${contentType} about: ${topic}`;
+
+  const generated = await runAITask({
+    organization_id: organizationId,
     task_type: "content_generation",
+    context: { brand: null, campaign: campaignId ? { id: campaignId } : undefined } as any,
     prompt,
-    context: { brand }
+    schema: GeneratedContentSchema
   });
 
-  try {
-    const rawText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(rawText);
-  } catch (e) {
-    console.error("Failed to parse AI generated content:", e);
-    // Fallback if AI didn't return JSON
-    return {
-      title: `Generated: ${topic.substring(0, 30)}...`,
-      body: generatedText,
-      hashtags: "",
-      cta: "",
-      tone: "Neutral"
-    };
-  }
+  // Since runAITask with schema already validates, `generated` is already parsed and typed.
+  const validated = generated;
+
+  // Insert into contents as draft
+  const { data: content, error } = await supabase
+    .from("contents")
+    .insert({
+      organization_id: organizationId,
+      title: validated.title,
+      body: validated.body,
+      platform: "instagram",
+      content_type: validated.content_type,
+      status: "draft",
+      cta: validated.cta,
+      hashtags: validated.hashtags,
+      created_by: user.id,
+      owner_id: user.id
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return { content, generated };
 }
 
 export async function submitForReview(contentId: string) {

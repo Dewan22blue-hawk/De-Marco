@@ -20,8 +20,10 @@ export function FontPicker({
 
   useEffect(() => {
     if (value !== inputValue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInputValue(value)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   useEffect(() => {

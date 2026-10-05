@@ -52,6 +52,7 @@ export async function createCalendarEvent(payload: any) {
       platform: payload.platform,
       scheduled_at: payload.scheduled_at,
       status: payload.status || "planned",
+      is_auto_post: payload.is_auto_post || false,
       created_by: user.id
     })
     .select()
@@ -65,6 +66,36 @@ export async function createCalendarEvent(payload: any) {
     record_id: event.id,
     action: "create",
     new_data: event
+  })
+
+  revalidatePath("/dashboard/calendar")
+  return { success: true, event }
+}
+
+export async function retryCalendarEvent(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
+  if (!profile?.default_organization_id) throw new Error("No organization assigned")
+
+  const { data: event, error } = await supabase
+    .from("content_calendar")
+    .update({ status: "scheduled", notes: null }) // Clear error notes
+    .eq("id", id)
+    .eq("status", "failed") // Only allow retrying failed events
+    .select()
+    .single()
+
+  if (error) throw error
+
+  await createAuditLog({
+    organization_id: profile.default_organization_id,
+    table_name: "content_calendar",
+    record_id: event.id,
+    action: "update",
+    new_data: { status: "scheduled", notes: null }
   })
 
   revalidatePath("/dashboard/calendar")

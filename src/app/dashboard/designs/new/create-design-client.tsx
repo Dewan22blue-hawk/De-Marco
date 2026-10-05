@@ -126,7 +126,7 @@ export function CreateDesignClient({ templates, brandKit }: { templates: any[], 
               >
                 <div className="relative aspect-square bg-surface-container-low overflow-hidden flex items-center justify-center p-4">
                   {template.thumbnail_asset ? (
-                    <img src={getPublicUrl(template.thumbnail_asset)} alt={template.name} className="w-full h-full object-contain drop-shadow-lg" />
+                    <img src={getPublicUrl(template.thumbnail_asset) || undefined} alt={template.name} className="w-full h-full object-contain drop-shadow-lg" />
                   ) : (
                     <LayoutTemplate size={48} className="text-on-surface-variant/20" />
                   )}
@@ -152,7 +152,7 @@ export function CreateDesignClient({ templates, brandKit }: { templates: any[], 
           <div className="flex items-center gap-4 border-b border-outline-variant/20 pb-4">
             <div className="w-16 h-16 rounded-xl bg-surface-container-low overflow-hidden">
               {selectedTemplate.thumbnail_asset ? (
-                <img src={getPublicUrl(selectedTemplate.thumbnail_asset)} alt="" className="w-full h-full object-cover" />
+                <img src={getPublicUrl(selectedTemplate.thumbnail_asset) || undefined} alt="" className="w-full h-full object-cover" />
               ) : (
                 <LayoutTemplate className="w-full h-full p-4 text-on-surface-variant/30" />
               )}

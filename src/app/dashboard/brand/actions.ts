@@ -38,7 +38,7 @@ export async function upsertBrandKit(organizationId: string, data: Record<string
   const validatedBrand = brandKitSchema.parse({
     ...data,
     organization_id: organizationId,
-    slug: data.slug || data.name.toLowerCase().replace(/ /g, "-"),
+    slug: data.slug || String(data.name || "brand").toLowerCase().replace(/ /g, "-"),
   })
 
   // 2. Get existing brand to compare for audit log
@@ -157,9 +157,8 @@ export async function uploadBrandLogo(organizationId: string, brandId: string, a
   // 1. Save Asset Metadata
   const asset = await saveAssetMetadata({
     ...assetData,
-    asset_type: "image",
-    organization_id: organizationId, // saveAssetMetadata already handles this from profile but we pass it anyway if it supports it
-  })
+    asset_type: "image"
+  } as any)
 
   // 2. Update Brand logo_asset_id
   const { error: updateError } = await supabase

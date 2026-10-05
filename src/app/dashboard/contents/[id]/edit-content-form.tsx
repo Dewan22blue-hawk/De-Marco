@@ -91,11 +91,9 @@ export function EditContentForm({ initialData }: { initialData: any }) {
               options={[
                 { value: "instagram", label: "Instagram" },
                 { value: "facebook", label: "Facebook" },
-                { value: "twitter", label: "Twitter / X" },
                 { value: "linkedin", label: "LinkedIn" },
-                { value: "tiktok", label: "TikTok" },
+                { value: "whatsapp", label: "WhatsApp" },
                 { value: "website", label: "Website / Blog" },
-                { value: "email", label: "Email" },
                 { value: "other", label: "Other" }
               ]}
             />
@@ -109,10 +107,10 @@ export function EditContentForm({ initialData }: { initialData: any }) {
               onChange={(val) => setFormData(prev => ({ ...prev, content_type: val }))}
               options={[
                 { value: "post", label: "Social Post" },
+                { value: "story", label: "Story" },
+                { value: "reel", label: "Reel" },
                 { value: "article", label: "Article" },
-                { value: "email", label: "Email Campaign" },
-                { value: "script", label: "Video Script" },
-                { value: "ad_copy", label: "Ad Copy" }
+                { value: "announcement", label: "Announcement" }
               ]}
             />
           </div>

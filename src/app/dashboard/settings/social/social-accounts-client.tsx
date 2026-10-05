@@ -117,7 +117,9 @@ export function SocialAccountsClient({ initialAccounts }: { initialAccounts: Soc
                 { value: "instagram", label: "Instagram" },
                 { value: "facebook", label: "Facebook" },
                 { value: "linkedin", label: "LinkedIn" },
-                { value: "twitter", label: "X / Twitter" },
+                { value: "whatsapp", label: "WhatsApp" },
+                { value: "website", label: "Website / Blog" },
+                { value: "other", label: "Other" }
               ]}
             />
           </div>

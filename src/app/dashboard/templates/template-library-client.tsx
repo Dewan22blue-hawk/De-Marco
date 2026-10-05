@@ -305,7 +305,6 @@ export function TemplateLibraryClient({
                   isSelected={selectedIds.has(template.id)}
                   onToggleSelect={() => toggleSelect(template.id)}
                   onClone={() => handleClone(template)}
-                  onArchive={() => handleArchive(template.id)}
                   onDelete={() => handleDelete(template.id)}
                 />
               ))}
@@ -335,7 +334,7 @@ export function TemplateLibraryClient({
 }
 
 function TemplateCard({ 
-  template, getThumbnailUrl, formatType, isSelected, onToggleSelect, onClone, onArchive 
+  template, getThumbnailUrl, formatType, isSelected, onToggleSelect, onClone, onDelete 
 }: { 
   template: Template
   getThumbnailUrl: (path: string | null | undefined) => string | null
@@ -425,7 +424,7 @@ function TemplateCard({
 }
 
 function TemplateRow({ 
-  template, getThumbnailUrl, formatType, isSelected, onToggleSelect, onClone, onArchive, onDelete 
+  template, getThumbnailUrl, formatType, isSelected, onToggleSelect, onClone, onDelete 
 }: { 
   template: Template
   getThumbnailUrl: (path: string | null | undefined) => string | null
@@ -433,7 +432,6 @@ function TemplateRow({
   isSelected: boolean
   onToggleSelect: () => void
   onClone: () => void
-  onArchive: () => void
   onDelete: () => void
 }) {
   const thumbUrl = getThumbnailUrl(template.thumbnail?.storage_path)

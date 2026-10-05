@@ -16,7 +16,9 @@ export default async function CampaignDetailPage(props: { params: Promise<{ id: 
     .from("campaigns")
     .select(`
       *,
-      contents (*)
+      campaign_contents (
+        contents (*)
+      )
     `)
     .eq("id", campaignId)
     .single()
@@ -25,8 +27,10 @@ export default async function CampaignDetailPage(props: { params: Promise<{ id: 
     notFound()
   }
 
-  // Filter out soft-deleted contents
-  const activeContents = (campaign.contents || []).filter((c: any) => !c.deleted_at)
+  // Filter out soft-deleted contents and extract from pivot
+  const activeContents = (campaign.campaign_contents || [])
+    .map((cc: any) => cc.contents)
+    .filter((c: any) => c && !c.deleted_at)
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 max-w-7xl mx-auto w-full">

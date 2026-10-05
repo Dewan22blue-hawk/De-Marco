@@ -11,7 +11,7 @@ import { AssetPickerModal, type Asset } from "@/components/dashboard/assets/asse
 import { createClient } from "@/lib/supabase/client"
 import { ImagePlus, X, Copy, Check, Info } from "lucide-react"
 
-export function BrandKitForm({ initialData, organizationId }: { initialData: Record<string, unknown>, organizationId: string }) {
+export function BrandKitForm({ initialData, organizationId }: { initialData: any, organizationId: string }) {
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
   const supabase = createClient()
@@ -20,7 +20,7 @@ export function BrandKitForm({ initialData, organizationId }: { initialData: Rec
   const [name, setName] = useState(initialData?.name || "My Brand")
   const [tagline, setTagline] = useState(initialData?.tagline || "")
   const [description, setDescription] = useState(initialData?.description || "")
-  const [preferredCta, setPreferredCta] = useState(initialData?.preferred_cta || "")
+  const [preferredCta, setPreferredCta] = useState<string>(initialData?.preferred_cta || "")
   
   // AI Guidelines States
   const [toneOfVoice, setToneOfVoice] = useState<string[]>(initialData?.tone_of_voice || [])

@@ -108,10 +108,10 @@ export function CreateContentForm() {
               onChange={(val) => setFormData(prev => ({ ...prev, content_type: val }))}
               options={[
                 { value: "post", label: "Social Post" },
+                { value: "story", label: "Story" },
+                { value: "reel", label: "Reel" },
                 { value: "article", label: "Article" },
-                { value: "email", label: "Email Campaign" },
-                { value: "script", label: "Video Script" },
-                { value: "ad_copy", label: "Ad Copy" }
+                { value: "announcement", label: "Announcement" }
               ]}
             />
           </div>

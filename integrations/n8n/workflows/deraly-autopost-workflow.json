@@ -2,58 +2,39 @@
   "name": "Deraly Auto-Post Workflow",
   "nodes": [
     {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "minutes",
-              "minutesInterval": 15
-            }
-          ]
-        }
-      },
+      "parameters": { "rule": { "interval": [ { "field": "minutes", "minutesInterval": 15 } ] } },
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [
-        250,
-        300
-      ]
+      "position": [ 250, 300 ]
     },
     {
       "parameters": {
         "url": "={{$env.DERALY_API_URL}}/api/webhooks/n8n/publish",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [ { "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" } ] },
         "options": {}
       },
       "name": "Fetch Scheduled Content",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        450,
-        300
-      ]
+      "position": [ 450, 300 ]
     },
     {
-      "parameters": {
-        "fieldToSplitOut": "data",
-        "options": {}
-      },
+      "parameters": { "fieldToSplitOut": "data", "options": {} },
       "name": "Item Lists",
       "type": "n8n-nodes-base.itemLists",
       "typeVersion": 3,
-      "position": [
-        650,
-        300
-      ]
+      "position": [ 650, 300 ]
+    },
+    {
+      "parameters": {
+        "conditions": { "boolean": [ { "value1": "={{ !!$json.content }}", "value2": true } ] }
+      },
+      "name": "Has Content?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [ 850, 300 ]
     },
     {
       "parameters": {
@@ -61,15 +42,9 @@
         "value1": "={{ $json.platform }}",
         "rules": {
           "rules": [
-            {
-              "value2": "instagram"
-            },
-            {
-              "value2": "facebook"
-            },
-            {
-              "value2": "linkedin"
-            }
+            { "value2": "instagram" },
+            { "value2": "facebook" },
+            { "value2": "linkedin" }
           ]
         },
         "fallbackOutput": 3
@@ -77,47 +52,22 @@
       "name": "Switch By Platform",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
-      "position": [
-        850,
-        300
-      ]
+      "position": [ 1050, 300 ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{$env.DERALY_API_URL}}/api/webhooks/n8n/publish",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [ { "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" } ] },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            {
-              "name": "eventId",
-              "value": "={{ $json.id }}"
-            },
-            {
-              "name": "contentId",
-              "value": "={{ $json.content.id }}"
-            },
-            {
-              "name": "organizationId",
-              "value": "={{ $json.organization_id }}"
-            },
-            {
-              "name": "status",
-              "value": "success"
-            },
-            {
-              "name": "publishedUrl",
-              "value": "https://example.com/post-url-placeholder"
-            }
+            { "name": "eventId", "value": "={{ $json.id }}" },
+            { "name": "contentId", "value": "={{ $json.content.id }}" },
+            { "name": "organizationId", "value": "={{ $json.organization_id }}" },
+            { "name": "status", "value": "success" },
+            { "name": "publishedUrl", "value": "https://example.com/post-url-placeholder" }
           ]
         },
         "options": {}
@@ -125,82 +75,52 @@
       "name": "Update Status (Success)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        1250,
-        300
-      ]
+      "position": [ 1350, 150 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.DERALY_API_URL}}/api/webhooks/n8n/publish",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [ { "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" } ] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "eventId", "value": "={{ $json.id }}" },
+            { "name": "contentId", "value": "={{ $json.content.id }}" },
+            { "name": "organizationId", "value": "={{ $json.organization_id }}" },
+            { "name": "status", "value": "failed" },
+            { "name": "error_note", "value": "Unsupported platform or failing stub" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Update Status (Failed)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [ 1350, 450 ]
     }
   ],
   "connections": {
-    "Schedule Trigger": {
-      "main": [
-        [
-          {
-            "node": "Fetch Scheduled Content",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Scheduled Content": {
-      "main": [
-        [
-          {
-            "node": "Item Lists",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Item Lists": {
-      "main": [
-        [
-          {
-            "node": "Switch By Platform",
-            "type": "main",
-            "index": 0
-          }
-        ]
+    "Schedule Trigger": { "main": [ [ { "node": "Fetch Scheduled Content", "type": "main", "index": 0 } ] ] },
+    "Fetch Scheduled Content": { "main": [ [ { "node": "Item Lists", "type": "main", "index": 0 } ] ] },
+    "Item Lists": { "main": [ [ { "node": "Has Content?", "type": "main", "index": 0 } ] ] },
+    "Has Content?": { 
+      "main": [ 
+        [ { "node": "Switch By Platform", "type": "main", "index": 0 } ],
+        [ ]
       ]
     },
     "Switch By Platform": {
       "main": [
-        [
-          {
-            "node": "Update Status (Success)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Update Status (Success)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Update Status (Success)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Update Status (Success)",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [ { "node": "Update Status (Success)", "type": "main", "index": 0 } ],
+        [ { "node": "Update Status (Success)", "type": "main", "index": 0 } ],
+        [ { "node": "Update Status (Success)", "type": "main", "index": 0 } ],
+        [ { "node": "Update Status (Failed)", "type": "main", "index": 0 } ]
       ]
     }
   },
   "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  },
+  "settings": { "executionOrder": "v1" },
   "versionId": "f90c8846-5e5d-4f76-8800-47e2247f0e74"
 }

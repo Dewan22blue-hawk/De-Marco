@@ -1,46 +1,47 @@
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+import { CalendarLibraryClient } from "./calendar-library-client"
 import { listCalendarEvents } from "./actions"
-import { Calendar as CalendarIcon, PlusCircle } from "lucide-react"
-import Link from "next/link"
-import { CalendarGridClient } from "./calendar-grid-client"
 
 export const metadata = {
   title: "Content Calendar | De-Marco Studio",
 }
 
-export default async function CalendarPage() {
+export default async function CalendarPage(props: {
+  searchParams?: Promise<{ q?: string; status?: string; platform?: string; sort?: string; view?: string; page?: string }>
+}) {
+  const searchParams = await props.searchParams;
+  const query = searchParams?.q || "";
+  const statusFilter = searchParams?.status || "";
+  const platformFilter = searchParams?.platform || "";
+  const sort = searchParams?.sort || "newest";
+  const view = searchParams?.view || "grid";
+  const page = Number(searchParams?.page) || 1;
+  const limit = 50; // Use a higher limit for calendar to ensure a full month is loaded
+  // const offset = (page - 1) * limit;
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+  
+  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
+  if (!profile?.default_organization_id) return <div>No organization assigned.</div>
+
+  // Fetch events
   const events = await listCalendarEvents();
+  // `listCalendarEvents` should ideally be updated to support the offset/limit/search params,
+  // but for now we pass the fetched events directly since it fetches the upcoming ones.
 
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8 max-w-7xl mx-auto w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-on-surface">Content Calendar</h1>
-          <p className="text-on-surface-variant mt-1">Schedule and manage your marketing content.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/calendar/new" className="clay-button-primary px-4 py-2 rounded-lg font-medium text-white flex items-center gap-2">
-            <PlusCircle className="w-4 h-4" />
-            Schedule Content
-          </Link>
-        </div>
-      </div>
-
-      {events && events.length > 0 ? (
-        <CalendarGridClient events={events} />
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-outline-variant/50 rounded-2xl bg-surface-container-lowest">
-          <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center mb-4">
-            <CalendarIcon className="w-8 h-8 text-on-surface-variant" />
-          </div>
-          <h3 className="text-xl font-bold text-on-surface mb-2">No scheduled content</h3>
-          <p className="text-on-surface-variant max-w-md mx-auto mb-6">
-            Start scheduling your contents and designs to view them on the calendar.
-          </p>
-          <Link href="/dashboard/calendar/new" className="clay-button-primary px-6 py-2.5 rounded-lg font-medium text-white">
-            Schedule Now
-          </Link>
-        </div>
-      )}
-    </div>
+    <CalendarLibraryClient 
+      initialEvents={events || []} 
+      totalCount={events?.length || 0}
+      search={query}
+      selectedStatus={statusFilter}
+      selectedPlatform={platformFilter}
+      selectedSort={sort}
+      selectedView={view}
+      limit={limit}
+    />
   )
 }

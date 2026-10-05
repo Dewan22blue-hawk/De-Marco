@@ -6,6 +6,7 @@ import { createCalendarEvent } from "../actions"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { DatetimePicker } from "@/components/ui/datetime-picker"
 
 export function CreateCalendarEventForm({ contents, campaigns }: { contents: any[], campaigns: any[] }) {
   const router = useRouter()
@@ -17,7 +18,8 @@ export function CreateCalendarEventForm({ contents, campaigns }: { contents: any
     campaign_id: "",
     platform: "instagram",
     scheduled_at: "",
-    status: "scheduled"
+    status: "scheduled",
+    is_auto_post: false
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
@@ -98,9 +100,8 @@ export function CreateCalendarEventForm({ contents, campaigns }: { contents: any
               options={[
                 { value: "instagram", label: "Instagram" },
                 { value: "facebook", label: "Facebook" },
-                { value: "twitter", label: "Twitter / X" },
                 { value: "linkedin", label: "LinkedIn" },
-                { value: "tiktok", label: "TikTok" },
+                { value: "whatsapp", label: "WhatsApp" },
                 { value: "website", label: "Website / Blog" },
                 { value: "other", label: "Other" }
               ]}
@@ -111,14 +112,26 @@ export function CreateCalendarEventForm({ contents, campaigns }: { contents: any
             <label className="text-sm font-semibold text-on-surface flex items-center gap-2">
               Scheduled Date & Time <span className="text-error">*</span>
             </label>
-            <Input 
-              type="datetime-local" 
+            <DatetimePicker 
               name="scheduled_at"
               value={formData.scheduled_at}
               onChange={handleChange}
               required
             />
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 mt-2">
+          <input 
+            type="checkbox"
+            id="is_auto_post"
+            checked={formData.is_auto_post}
+            onChange={(e) => setFormData(prev => ({ ...prev, is_auto_post: e.target.checked }))}
+            className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary"
+          />
+          <label htmlFor="is_auto_post" className="text-sm font-medium text-on-surface">
+            Enable Auto-Post via n8n
+          </label>
         </div>
       </div>
 

@@ -2,43 +2,69 @@ import { createClient } from "@/lib/supabase/server";
 import { GeminiProvider } from "./gemini-provider";
 import { AITaskType, AIContext } from "./types";
 import { createAuditLog } from "@/lib/audit";
+import { z } from "zod";
 
-export async function runAITask(opts: {
+export async function runAITask<T = any>(opts: {
   organization_id: string;
   task_type: AITaskType;
   prompt: string;
   context?: AIContext;
-}) {
+  schema?: z.ZodSchema<T>;
+}): Promise<T> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
-  // Get AI provider credentials (for now, assume process.env.GEMINI_API_KEY)
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("AI provider configuration missing");
 
   const provider = new GeminiProvider(apiKey);
 
-  // Compile system prompt based on brand kit
-  let systemPrompt = "You are an expert marketing copywriter and strategist.";
-  if (opts.context?.brand) {
+  // Fetch Brand Kit if not provided in context
+  let brand = opts.context?.brand;
+  if (!brand) {
+    const { data: fetchedBrand } = await supabase
+      .from("brands")
+      .select("*")
+      .eq("organization_id", opts.organization_id)
+      .eq("is_default", true)
+      .maybeSingle();
+    
+    if (fetchedBrand) {
+      brand = fetchedBrand;
+    }
+  }
+
+  let systemPrompt = "You are an expert marketing copywriter and strategist.\n";
+  if (brand) {
     systemPrompt += `
 Brand Context:
-- Name: ${opts.context.brand.name}
-- Tagline: ${opts.context.brand.tagline || 'N/A'}
-- Description: ${opts.context.brand.description || 'N/A'}
-- Tone of Voice: ${opts.context.brand.tone_of_voice?.join(', ') || 'Professional'}
-- Forbidden Words: ${opts.context.brand.forbidden_words?.join(', ') || 'None'}
-- Preferred CTA: ${opts.context.brand.preferred_cta || 'N/A'}
+Name: ${brand.name}
+Tagline: ${brand.tagline || 'N/A'}
+Description: ${brand.description || 'N/A'}
+Tone: ${brand.tone_of_voice?.join(', ') || 'Professional'}
+Forbidden words: ${brand.forbidden_words?.join(', ') || 'None'}
+Preferred CTA: ${brand.preferred_cta || 'N/A'}
 `;
   }
 
-  // Execute AI Request
+  systemPrompt += `
+Strict Constraints & Anti-Hallucination Rules:
+- DO NOT invent or hallucinate any prices, discounts, promotions, or factual claims unless explicitly provided in the context.
+- Adhere strictly to the Brand Context and tone of voice.
+`;
+
+  if (opts.schema) {
+    systemPrompt += `\nYou must return ONLY a valid JSON object matching the requested schema. Do not include markdown formatting, backticks, or any conversational text.`;
+  }
+
   const response = await provider.generateText({
     prompt: opts.prompt,
-    systemPrompt: systemPrompt,
+    systemPrompt,
     temperature: 0.7,
   });
+
+  const text = response.text;
 
   // Log to ai_runs
   const { data: run, error: runError } = await supabase
@@ -47,7 +73,7 @@ Brand Context:
       organization_id: opts.organization_id,
       task_type: opts.task_type,
       input_context: { prompt: opts.prompt, context: opts.context },
-      output: response,
+      output: text,
       created_by: user.id,
     })
     .select()
@@ -55,7 +81,7 @@ Brand Context:
 
   if (runError) {
     console.error("Failed to log AI run:", runError);
-  } else {
+  } else if (run) {
     // Create Audit Log for AI execution
     await createAuditLog({
       organization_id: opts.organization_id,
@@ -66,7 +92,20 @@ Brand Context:
     });
   }
 
-  return response.text;
+  if (opts.schema) {
+    try {
+      const rawText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(rawText);
+      const validated = opts.schema.safeParse(parsed);
+      if (!validated.success) throw new Error("Invalid AI output");
+      return validated.data as T;
+    } catch (e) {
+      console.error("AI Output Validation Failed:", e);
+      throw new Error("AI returned invalid data format");
+    }
+  }
+
+  return text as unknown as T;
 }
 
 export async function resolveTemplateVariablesWithAI(opts: {

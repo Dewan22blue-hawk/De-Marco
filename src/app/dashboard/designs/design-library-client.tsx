@@ -202,7 +202,7 @@ export function DesignLibraryClient({
               >
                 <Link href={`/dashboard/designs/${design.id}`} className="block relative aspect-square bg-surface-container-low overflow-hidden">
                   {design.preview_asset ? (
-                    <img src={getPublicUrl(design.preview_asset)} alt={design.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <img src={getPublicUrl(design.preview_asset) || undefined} alt={design.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-on-surface-variant">
                       <LayoutTemplate size={48} className="opacity-20 mb-2" />
@@ -281,7 +281,7 @@ export function DesignLibraryClient({
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-surface-container-low overflow-hidden shrink-0 flex items-center justify-center relative">
                            {design.preview_asset ? (
-                             <img src={getPublicUrl(design.preview_asset)} alt="" className="w-full h-full object-cover" />
+                             <img src={getPublicUrl(design.preview_asset) || undefined} alt="" className="w-full h-full object-cover" />
                            ) : (
                              <LayoutTemplate size={20} className="text-on-surface-variant/50" />
                            )}

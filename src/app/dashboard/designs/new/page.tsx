@@ -15,7 +15,7 @@ export default async function NewDesignPage() {
   const orgId = profile.default_organization_id
 
   // Fetch templates for the picker
-  const { data: templates } = await listTemplates({ limit: 50, sort_by: 'created_at', sort_dir: 'desc' })
+  const { data: templates } = await listTemplates({ limit: 50 })
   
   // Fetch brand kit to provide context if needed
   const brandKit = await getBrandKit(orgId)

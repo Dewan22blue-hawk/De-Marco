@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { designElementTypeSchema, designStatusSchema } from "./template"; // Assuming we can extract or create these
+
 
 // Redefining enums if not easily importable
 export const DesignStatus = z.enum(["draft", "review", "approved", "archived"]);
@@ -40,16 +40,16 @@ export const designElementSchema = z.object({
   z_index: z.number().int().default(0),
   visible: z.boolean().default(true),
   locked: z.boolean().default(false),
-  content: z.record(z.unknown()).optional(),
-  style: z.record(z.unknown()).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  content: z.record(z.string(), z.unknown()).optional(),
+  style: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const designVersionSchema = z.object({
   id: z.string().uuid().optional(),
   design_id: z.string().uuid(),
   version: z.number().int().positive(),
-  snapshot: z.record(z.unknown()),
+  snapshot: z.record(z.string(), z.unknown()),
   created_by: z.string().uuid(),
 });
 

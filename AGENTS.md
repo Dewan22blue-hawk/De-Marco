@@ -522,5 +522,13 @@ Application-level filtering is NOT a replacement for RLS.
 
 Never rely solely on:
 
-```ts
 .eq("organization_id", organizationId)
+```
+
+---
+
+# 14. ENVIRONMENT STANDARDIZATION
+
+NEVER use the local Supabase environment (`http://127.0.0.1:54321` or `localhost`).
+ALWAYS use the Supabase public (online) project for development, testing, and production.
+Make sure all operations, database migrations, and API calls are pointed towards the public Supabase instance instead of the local Docker-based Supabase.

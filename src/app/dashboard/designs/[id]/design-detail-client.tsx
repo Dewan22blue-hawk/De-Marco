@@ -274,7 +274,9 @@ export function DesignDetailClient({
         {/* Center Canvas Studio Area */}
         <div className="flex-1 bg-neutral-200 dark:bg-neutral-900/80 p-8 flex flex-col items-center justify-center overflow-auto relative">
           <div className="shadow-2xl border border-outline-variant/30 rounded-lg overflow-hidden">
-            <CanvasEditor 
+            <CanvasEditor
+              onDeleteElement={(id) => {}}
+              onDuplicateElement={(id) => {}} 
               elements={elements}
               width={design.width}
               height={design.height}

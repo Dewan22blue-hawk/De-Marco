@@ -29,26 +29,45 @@ export async function GET(request: Request) {
 
   const supabase = getAdminClient()
 
-  // Fetch all scheduled content that should be published by now
-  const { data: scheduledEvents, error } = await supabase
-    .from("content_calendar")
-    .select(`
-      id, 
-      organization_id, 
-      platform, 
-      scheduled_at,
-      content:contents(id, title, body, status, cta, hashtags),
-      campaign:campaigns(id, name)
-    `)
-    .eq("status", "scheduled")
-    .lte("scheduled_at", new Date().toISOString())
+  // Use the RPC to atomically claim due auto-posts
+  const { data: claimedEvents, error: claimError } = await supabase.rpc(
+    "claim_due_auto_posts", 
+    { limit_count: 50 }
+  )
 
-  if (error) {
-    console.error("Failed to fetch scheduled events:", error)
+  if (claimError) {
+    console.error("Failed to claim scheduled events:", claimError)
     return NextResponse.json({ error: "Database error" }, { status: 500 })
   }
 
-  return NextResponse.json({ data: scheduledEvents })
+  if (!claimedEvents || claimedEvents.length === 0) {
+    return NextResponse.json({ data: [] })
+  }
+
+  // Fetch full details of the contents for the claimed events
+  const contentIds = claimedEvents.map((e: any) => e.content_id).filter(Boolean)
+  
+  if (contentIds.length === 0) {
+      return NextResponse.json({ data: claimedEvents })
+  }
+
+  const { data: contents, error: contentsError } = await supabase
+    .from("contents")
+    .select("id, title, body, status, cta, hashtags")
+    .in("id", contentIds)
+
+  if (contentsError) {
+    console.error("Failed to fetch contents:", contentsError)
+  }
+
+  const contentsMap = new Map(contents?.map((c: any) => [c.id, c]) || [])
+
+  const enrichedEvents = claimedEvents.map((e: any) => ({
+    ...e,
+    content: e.content_id ? contentsMap.get(e.content_id) : null
+  }))
+
+  return NextResponse.json({ data: enrichedEvents })
 }
 
 export async function POST(request: Request) {
@@ -66,6 +85,17 @@ export async function POST(request: Request) {
 
     const supabase = getAdminClient()
 
+    // Idempotency check: prevent duplicate processing
+    const { data: currentEvent } = await supabase
+      .from("content_calendar")
+      .select("status")
+      .eq("id", eventId)
+      .single()
+
+    if (currentEvent?.status === "published") {
+      return NextResponse.json({ success: true, note: "Already published" })
+    }
+
     if (status === "success") {
       // Update calendar status
       await supabase
@@ -73,13 +103,22 @@ export async function POST(request: Request) {
         .update({ status: "published" })
         .eq("id", eventId)
 
+      // Fetch existing metadata to merge
+      const { data: currentContent } = await supabase
+        .from("contents")
+        .select("metadata")
+        .eq("id", contentId)
+        .single()
+        
+      const existingMetadata = currentContent?.metadata || {}
+
       // Update contents status
       await supabase
         .from("contents")
         .update({ 
           status: "published", 
           published_at: new Date().toISOString(),
-          metadata: { published_url: publishedUrl }
+          metadata: { ...existingMetadata, published_url: publishedUrl }
         })
         .eq("id", contentId)
 
