@@ -18,6 +18,8 @@ interface Content {
   platform: string | null
   content_type: string
   created_at: string
+  metadata?: any
+  content_calendar?: { id: string; scheduled_at: string; status: string }[]
 }
 
 export function ContentLibraryClient({ 
@@ -312,9 +314,22 @@ export function ContentLibraryClient({
                           <h4 className="font-semibold text-on-surface truncate text-lg group-hover:text-primary transition-colors">
                             {content.title}
                           </h4>
-                          <span className="text-xs font-medium px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded-full">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            content.status === 'published' ? 'bg-emerald-100 text-emerald-800' :
+                            content.status === 'failed' ? 'bg-red-100 text-red-800' :
+                            content.status === 'review' ? 'bg-amber-100 text-amber-800' :
+                            'bg-secondary-container text-on-secondary-container'
+                          }`}>
                             {content.status}
                           </span>
+                          {content.status === 'published' && content.metadata?.is_mock === true && (
+                            <span className="text-xs font-medium px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full font-label-code-sm">MOCK</span>
+                          )}
+                          {content.content_calendar && content.content_calendar.length > 0 && content.content_calendar[0].status === 'scheduled' && (
+                            <span className="flex items-center justify-center text-indigo-600 bg-indigo-50 w-6 h-6 rounded-full" title={`Scheduled for ${new Date(content.content_calendar[0].scheduled_at).toLocaleString()}`}>
+                              <span className="material-symbols-outlined text-[14px]">calendar_clock</span>
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 text-sm text-on-surface-variant mt-1">
                           <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" />{content.content_type}</span>
@@ -342,9 +357,25 @@ export function ContentLibraryClient({
                   <Link href={`/dashboard/contents/${content.id}`} className="flex-1 flex flex-col gap-4">
                     <div className="flex justify-between items-start pr-8">
                       <h3 className="font-semibold text-lg text-on-surface line-clamp-1 group-hover:text-primary transition-colors">{content.title}</h3>
-                      <span className="text-xs font-medium px-2 py-1 bg-secondary-container text-on-secondary-container rounded-full">
-                        {content.status}
-                      </span>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          content.status === 'published' ? 'bg-emerald-100 text-emerald-800' :
+                          content.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          content.status === 'review' ? 'bg-amber-100 text-amber-800' :
+                          'bg-secondary-container text-on-secondary-container'
+                        }`}>
+                          {content.status}
+                        </span>
+                        {content.status === 'published' && content.metadata?.is_mock === true && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded font-label-code-sm mt-0.5">MOCK</span>
+                        )}
+                        {content.content_calendar && content.content_calendar.length > 0 && content.content_calendar[0].status === 'scheduled' && (
+                          <span className="flex items-center justify-center text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded mt-0.5" title={`Scheduled for ${new Date(content.content_calendar[0].scheduled_at).toLocaleString()}`}>
+                            <span className="material-symbols-outlined text-[12px] mr-1">calendar_clock</span>
+                            <span className="text-[10px] font-semibold">Sch</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-on-surface-variant line-clamp-3 flex-1 bg-surface-container-lowest p-3 rounded-lg font-mono">
                       {content.body || "No content body."}

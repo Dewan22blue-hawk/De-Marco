@@ -75,24 +75,29 @@ export function SocialAccountsClient({ initialAccounts }: { initialAccounts: Soc
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {accounts.map(account => (
-              <div key={account.id} className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low border border-outline-variant/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                    <Share2 size={20} />
+                <div key={account.id} className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low border border-outline-variant/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Share2 size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-on-surface text-sm capitalize">{account.platform}</p>
+                      <p className="text-xs text-on-surface-variant">{account.account_name}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-on-surface text-sm capitalize">{account.platform}</p>
-                    <p className="text-xs text-on-surface-variant">{account.account_name}</p>
+                  <div className="flex items-center gap-3">
+                    {account.expires_at && new Date(account.expires_at) < new Date() && (
+                      <span className="text-xs font-semibold px-2 py-0.5 bg-error/10 text-error rounded-full">Expired</span>
+                    )}
+                    <button
+                      onClick={() => handleDelete(account.id)}
+                      className="p-2 rounded-xl text-error hover:bg-error/10 transition-colors"
+                      title="Disconnect"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(account.id)}
-                  className="p-2 rounded-xl text-error hover:bg-error/10 transition-colors"
-                  title="Disconnect"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
             ))}
           </div>
         )}
@@ -162,6 +167,21 @@ export function SocialAccountsClient({ initialAccounts }: { initialAccounts: Soc
             </Button>
           </div>
         </form>
+      </div>
+
+      <div className="clay-surface rounded-3xl p-6 border border-outline-variant/30">
+        <h3 className="text-title-md font-bold mb-4 text-on-surface">How to get an Access Token</h3>
+        <p className="text-sm text-on-surface-variant mb-4">
+          For the MVP phase, we use Service-Side Access Tokens. Please generate a long-lived access token from your platform&apos;s developer portal and securely paste it above.
+        </p>
+        <ul className="list-disc pl-5 text-sm text-on-surface-variant space-y-2">
+          <li>
+            <strong>Instagram / Facebook:</strong> Follow the <a href="https://developers.facebook.com/docs/instagram-api/getting-started" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Meta Graph API Documentation</a> to create an app and generate a Page Access Token.
+          </li>
+          <li>
+            <strong>LinkedIn:</strong> Follow the <a href="https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn OAuth Documentation</a> to generate an organization access token.
+          </li>
+        </ul>
       </div>
     </div>
   )

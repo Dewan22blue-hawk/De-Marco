@@ -17,7 +17,7 @@ export async function listContents(opts?: { search?: string; status?: string; li
 
   let query = supabase
     .from("contents")
-    .select("*, brand:brands(name)", { count: "exact" })
+    .select("*, brand:brands(name), content_calendar(id, scheduled_at, status)", { count: "exact" })
     .eq("organization_id", profile.default_organization_id)
     .is("deleted_at", null)
 

@@ -9,11 +9,14 @@ type Activity = {
   status?: string;
   template_type?: string;
   created_at: string;
-  type: "campaign" | "creative" | "template";
+  type: "campaign" | "creative" | "template" | "publishing";
+  platform?: string;
+  scheduled_at?: string;
+  notes?: string;
 };
 
 export default function ActivityStream({ activities }: { activities: Activity[] }) {
-  const [activeTab, setActiveTab] = useState<"all" | "creative" | "template" | "campaign">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "creative" | "template" | "campaign" | "publishing">("all");
 
   const filteredActivities = activities.filter((activity) => {
     if (activeTab === "all") return true;
@@ -32,8 +35,8 @@ export default function ActivityStream({ activities }: { activities: Activity[] 
           <h2 className="text-headline-sm font-headline-sm text-on-surface tracking-tight">Recent Workspace Activities</h2>
         </div>
         {/* Filter Tabs inside Inset Debossed Container */}
-        <div className="debossed-well p-1 rounded-2xl flex items-center gap-1 self-start sm:self-auto">
-          {(["all", "creative", "template", "campaign"] as const).map((tab) => (
+        <div className="debossed-well p-1 rounded-2xl flex items-center gap-1 self-start sm:self-auto overflow-x-auto max-w-full">
+          {(["all", "creative", "template", "campaign", "publishing"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -67,7 +70,13 @@ export default function ActivityStream({ activities }: { activities: Activity[] 
                     ? "bg-secondary-fixed text-on-secondary-fixed"
                     : activity.type === "creative"
                     ? "bg-primary/10 text-primary"
-                    : "bg-cyan-100 text-cyan-800"
+                    : activity.type === "template"
+                    ? "bg-cyan-100 text-cyan-800"
+                    : activity.status === "failed"
+                    ? "bg-red-100 text-red-800"
+                    : activity.status === "published"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-indigo-100 text-indigo-800"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">
@@ -75,7 +84,13 @@ export default function ActivityStream({ activities }: { activities: Activity[] 
                     ? "campaign"
                     : activity.type === "creative"
                     ? "palette"
-                    : "style"}
+                    : activity.type === "template"
+                    ? "style"
+                    : activity.status === "failed"
+                    ? "error"
+                    : activity.status === "published"
+                    ? "check_circle"
+                    : "calendar_clock"}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
@@ -92,7 +107,15 @@ export default function ActivityStream({ activities }: { activities: Activity[] 
                     ? `Campaign has been updated to status: ${activity.status}.`
                     : activity.type === "creative"
                     ? `New design created and currently in ${activity.status} state.`
-                    : `New template added of type: ${activity.template_type}.`}
+                    : activity.type === "template"
+                    ? `New template added of type: ${activity.template_type}.`
+                    : activity.type === "publishing" && activity.status === "scheduled"
+                    ? `Content scheduled for ${activity.platform} at ${new Date(activity.scheduled_at || "").toLocaleString()}.`
+                    : activity.type === "publishing" && activity.status === "published"
+                    ? `Content successfully published to ${activity.platform}.`
+                    : activity.type === "publishing" && activity.status === "failed"
+                    ? `Failed to publish to ${activity.platform}: ${activity.notes || "Unknown error"}`
+                    : ""}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   <span
@@ -101,7 +124,13 @@ export default function ActivityStream({ activities }: { activities: Activity[] 
                         ? "bg-secondary/10 text-secondary border-secondary/20"
                         : activity.type === "creative"
                         ? "bg-primary/10 text-primary border-primary/20"
-                        : "bg-cyan-50 text-cyan-700 border-cyan-200"
+                        : activity.type === "template"
+                        ? "bg-cyan-50 text-cyan-700 border-cyan-200"
+                        : activity.status === "failed"
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : activity.status === "published"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-indigo-50 text-indigo-700 border-indigo-200"
                     }`}
                   >
                     {activity.status || activity.template_type || activity.type}

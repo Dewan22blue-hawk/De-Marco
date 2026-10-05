@@ -2,6 +2,7 @@ import { MotionDiv, MotionSection, containerVariants, itemVariants } from "@/com
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentUserContext } from "@/lib/auth/authorization"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import ActivityStream from "./activity-stream"
 export default async function DashboardPage() {
   const context = await getCurrentUserContext()
@@ -18,7 +19,9 @@ export default async function DashboardPage() {
     { data: recentCampaigns },
     { data: allTemplates },
     { data: recentDesigns },
-    { data: recentTemplates }
+    { data: recentTemplates },
+    { data: calendarEvents },
+    { data: recentPublishing }
   ] = await Promise.all([
     supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("designs").select("*", { count: "exact", head: true }),
@@ -27,13 +30,30 @@ export default async function DashboardPage() {
     supabase.from("campaigns").select("id, name, status, created_at").order("created_at", { ascending: false }).limit(4),
     supabase.from("templates").select("template_type"),
     supabase.from("designs").select("id, name, status, created_at").order("created_at", { ascending: false }).limit(4),
-    supabase.from("templates").select("id, name, template_type, created_at").order("created_at", { ascending: false }).limit(4)
+    supabase.from("templates").select("id, name, template_type, created_at").order("created_at", { ascending: false }).limit(4),
+    supabase.from("content_calendar").select("status, is_auto_post"),
+    supabase.from("content_calendar").select("id, status, platform, scheduled_at, updated_at, notes, content:contents(title)").in("status", ["scheduled", "published", "failed"]).order("updated_at", { ascending: false }).limit(6)
   ]);
+
+  const scheduledContentsCount = calendarEvents?.filter(e => e.status === 'scheduled' && e.is_auto_post).length || 0;
+  const queuedContentsCount = calendarEvents?.filter(e => e.status === 'queued').length || 0;
+  const publishedContentsCount = calendarEvents?.filter(e => e.status === 'published').length || 0;
+  const failedContentsCount = calendarEvents?.filter(e => e.status === 'failed').length || 0;
 
   const activities = [
     ...(recentCampaigns || []).map(c => ({ ...c, type: 'campaign' as const })),
     ...(recentDesigns || []).map(d => ({ ...d, type: 'creative' as const })),
-    ...(recentTemplates || []).map(t => ({ ...t, type: 'template' as const }))
+    ...(recentTemplates || []).map(t => ({ ...t, type: 'template' as const })),
+    ...(recentPublishing || []).map(p => ({ 
+      id: p.id, 
+      name: (p.content as any)?.title || 'Untitled', 
+      status: p.status, 
+      created_at: p.updated_at, 
+      platform: p.platform, 
+      scheduled_at: p.scheduled_at,
+      notes: p.notes,
+      type: 'publishing' as const 
+    }))
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Generate 7-day chart data based on real campaigns
@@ -52,12 +72,12 @@ export default async function DashboardPage() {
   });
   const maxChartValue = Math.max(...chartData.map(d => d.count), 5);
 
-  // Group templates for the donut chart
   const templateTypes = allTemplates?.reduce((acc, curr) => {
     const type = curr.template_type || 'Unknown';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
+
   const totalTemplates = Object.values(templateTypes).reduce((a, b) => a + b, 0);
   return (
     <MotionDiv
@@ -185,30 +205,49 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 4: Total Assets */}
+        {/* Card 4: Publishing Queue */}
         <div className="clay-surface rounded-3xl p-6 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-200">
           <div>
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shadow-inner">
-                <span className="material-symbols-outlined text-[24px]">folder_special</span>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shadow-inner">
+                <span className="material-symbols-outlined text-[24px]">calendar_clock</span>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-label-code-sm font-label-code-sm font-semibold">
-                Storage
+              <span className={`px-2.5 py-1 rounded-full text-label-code-sm font-label-code-sm font-semibold ${
+                failedContentsCount > 0 ? 'bg-red-100 text-red-800' :
+                queuedContentsCount > 0 ? 'bg-amber-100 text-amber-800' :
+                'bg-indigo-100 text-indigo-800'
+              }`}>
+                Auto Post
               </span>
             </div>
             <div className="mt-4">
-              <span className="text-body-md font-headline-sm font-medium text-on-surface-variant">Total Assets</span>
-              <div className="flex items-baseline gap-2.5 mt-1">
-                <span className="text-[32px] font-label-code-md font-bold text-on-surface">{totalAssetsCount || 0}</span>
+              <span className="text-body-md font-headline-sm font-medium text-on-surface-variant">Publishing Queue</span>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <div className="flex flex-col">
+                  <span className="text-label-code-sm font-label-code-sm text-outline">Scheduled</span>
+                  <span className="text-[20px] font-label-code-md font-bold text-on-surface">{scheduledContentsCount}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-label-code-sm font-label-code-sm text-amber-600">Queued</span>
+                  <span className="text-[20px] font-label-code-md font-bold text-amber-700">{queuedContentsCount}</span>
+                </div>
+                <div className="flex flex-col mt-2">
+                  <span className="text-label-code-sm font-label-code-sm text-emerald-600">Published</span>
+                  <span className="text-[20px] font-label-code-md font-bold text-emerald-700">{publishedContentsCount}</span>
+                </div>
+                <div className="flex flex-col mt-2">
+                  <span className="text-label-code-sm font-label-code-sm text-red-600">Failed</span>
+                  <span className="text-[20px] font-label-code-md font-bold text-red-700">{failedContentsCount}</span>
+                </div>
               </div>
             </div>
           </div>
           <div className="pt-4 mt-4 border-t border-outline-variant/20 flex items-center justify-between">
-            <span className="text-body-sm font-body-sm text-outline">Images &amp; Videos</span>
-            <a className="text-emerald-700 font-headline-sm text-body-sm font-semibold flex items-center gap-1 group-hover:gap-1.5 transition-all" href="#assets">
+            <span className="text-body-sm font-body-sm text-outline">Manage schedule</span>
+            <Link className="text-indigo-700 font-headline-sm text-body-sm font-semibold flex items-center gap-1 group-hover:gap-1.5 transition-all" href="/dashboard/calendar">
               <span className="">View</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </a>
+            </Link>
           </div>
         </div>
       </MotionSection>

@@ -7,6 +7,7 @@ export interface SocialAccount {
   account_id: string;
   account_name: string;
   status: string;
+  expires_at?: string;
 }
 
 export interface PostContent {
@@ -35,7 +36,7 @@ export class SocialService {
 
     const { data: accounts, error } = await supabase
       .from("social_accounts")
-      .select("id, organization_id, platform, account_id, account_name, status")
+      .select("id, organization_id, platform, account_id, account_name, status, expires_at")
       .eq("organization_id", profile.default_organization_id)
       .eq("status", "active");
 

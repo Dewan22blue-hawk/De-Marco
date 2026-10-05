@@ -62,10 +62,38 @@ export async function GET(request: Request) {
 
   const contentsMap = new Map(contents?.map((c: any) => [c.id, c]) || [])
 
-  const enrichedEvents = claimedEvents.map((e: any) => ({
-    ...e,
-    content: e.content_id ? contentsMap.get(e.content_id) : null
-  }))
+  // Fetch social accounts for the organizations in claimedEvents
+  const orgIds = Array.from(new Set(claimedEvents.map((e: any) => e.organization_id).filter(Boolean)))
+  let socialAccounts: any[] = []
+  if (orgIds.length > 0) {
+    const { data: accounts, error: accountsError } = await supabase
+      .from("social_accounts")
+      .select("organization_id, platform, account_id, access_token")
+      .in("organization_id", orgIds as string[])
+      .eq("status", "active")
+
+    if (accountsError) {
+      console.error("Failed to fetch social accounts:", accountsError)
+    } else {
+      socialAccounts = accounts || []
+    }
+  }
+
+  const getSocialAccount = (orgId: string, platform: string) => {
+    return socialAccounts.find(a => a.organization_id === orgId && a.platform === platform)
+  }
+
+  const enrichedEvents = claimedEvents.map((e: any) => {
+    const account = getSocialAccount(e.organization_id, e.platform);
+    return {
+      ...e,
+      content: e.content_id ? contentsMap.get(e.content_id) : null,
+      social_account: account ? {
+        account_id: account.account_id,
+        access_token: account.access_token
+      } : null
+    }
+  })
 
   return NextResponse.json({ data: enrichedEvents })
 }

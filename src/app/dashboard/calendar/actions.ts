@@ -101,3 +101,37 @@ export async function retryCalendarEvent(id: string) {
   revalidatePath("/dashboard/calendar")
   return { success: true, event }
 }
+
+export async function retryAllFailedCalendarEvents() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
+  if (!profile?.default_organization_id) throw new Error("No organization assigned")
+
+  const { data: events, error } = await supabase
+    .from("content_calendar")
+    .update({ status: "scheduled", notes: null, claimed_at: null, updated_at: new Date().toISOString() })
+    .eq("organization_id", profile.default_organization_id)
+    .eq("status", "failed")
+    .select()
+
+  if (error) throw error
+
+  // Create audit log for each retried event
+  if (events && events.length > 0) {
+    for (const event of events) {
+      await createAuditLog({
+        organization_id: profile.default_organization_id,
+        table_name: "content_calendar",
+        record_id: event.id,
+        action: "update",
+        new_data: { status: "scheduled", notes: null, claimed_at: null, _bulk_retry: true }
+      })
+    }
+  }
+
+  revalidatePath("/dashboard/calendar")
+  return { success: true, retriedCount: events?.length || 0 }
+}

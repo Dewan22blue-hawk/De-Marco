@@ -4,7 +4,7 @@ import { useState, useCallback, useTransition, useEffect } from "react"
 import { Search, PlusCircle, LayoutGrid, List, X, Check, Calendar as CalendarIcon, ChevronLeft, ChevronRight, FileText } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { retryCalendarEvent } from "./actions"
+import { retryCalendarEvent, retryAllFailedCalendarEvents } from "./actions"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -57,6 +57,9 @@ export function CalendarLibraryClient({
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [now, setNow] = useState<number | null>(null)
+  const [isRetryingAll, setIsRetryingAll] = useState(false)
+
+  const failedEventsCount = events.filter(e => e.status === 'failed').length;
 
   useEffect(() => {
     setNow(Date.now())
@@ -156,6 +159,19 @@ export function CalendarLibraryClient({
     }
   }
 
+  const handleRetryAllFailed = async () => {
+    setIsRetryingAll(true)
+    setErrorMsg(null)
+    try {
+      await retryAllFailedCalendarEvents()
+      setEvents(prev => prev.map(ev => ev.status === 'failed' ? { ...ev, status: 'scheduled' } : ev))
+    } catch (err: any) {
+      setErrorMsg("Failed to retry all: " + err.message)
+    } finally {
+      setIsRetryingAll(false)
+    }
+  }
+
   // Generate calendar days for Grid View
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay()
@@ -175,6 +191,25 @@ export function CalendarLibraryClient({
         <div className="bg-red-50 text-red-700 p-4 rounded-2xl flex items-center justify-between border border-red-200">
           <span>{errorMsg}</span>
           <button onClick={() => setErrorMsg(null)} className="p-1 hover:bg-red-100 rounded-lg"><X size={16} /></button>
+        </div>
+      )}
+
+      {failedEventsCount > 0 && (
+        <div className="bg-red-50 text-red-800 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between border border-red-200 gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⚠️</span>
+            <span className="font-medium">{failedEventsCount} publishing failed. View details below.</span>
+          </div>
+          <Button 
+            onClick={handleRetryAllFailed} 
+            disabled={isRetryingAll}
+            isLoading={isRetryingAll}
+            variant="outline"
+            size="sm"
+            className="text-red-700 hover:text-red-800 border-red-300 hover:bg-red-100 bg-white whitespace-nowrap"
+          >
+            {!isRetryingAll && "Retry All Failed"}
+          </Button>
         </div>
       )}
 
