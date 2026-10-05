@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { CreateContentForm } from "./create-content-form"
 
 export const metadata = {
@@ -13,7 +14,9 @@ export default function NewContentPage() {
       </div>
 
       <div className="clay-surface rounded-2xl p-6 border border-outline-variant/30">
-        <CreateContentForm />
+        <Suspense fallback={<div className="h-40 flex items-center justify-center">Loading form...</div>}>
+          <CreateContentForm />
+        </Suspense>
       </div>
     </div>
   )

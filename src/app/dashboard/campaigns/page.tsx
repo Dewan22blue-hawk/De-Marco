@@ -45,7 +45,7 @@ export default async function CampaignsPage(props: {
       {campaigns && campaigns.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {campaigns.map(campaign => (
-            <div key={campaign.id} className="clay-card rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all duration-300">
+            <Link href={`/dashboard/campaigns/${campaign.id}`} key={campaign.id} className="clay-card rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all duration-300 block">
               <div className="flex justify-between items-start">
                 <h3 className="font-semibold text-lg text-on-surface line-clamp-1">{campaign.name}</h3>
                 <span className="text-xs font-medium px-2 py-1 bg-primary-container text-on-primary-container rounded-full">
@@ -56,7 +56,7 @@ export default async function CampaignsPage(props: {
               <div className="text-xs text-on-surface-variant font-medium">
                 {campaign.code} • {campaign.objective || "No objective"}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       ) : (

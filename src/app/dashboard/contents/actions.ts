@@ -74,6 +74,19 @@ export async function createContent(payload: any) {
 }
 
 export async function autoGenerateContent(topic: string) {
+  // Legacy function: generates and saves as draft immediately
+  const generated = await generateContentWithAI(topic, "post")
+  
+  return await createContent({
+    title: generated.title || `Generated: ${topic.substring(0, 30)}...`,
+    body: generated.body,
+    platform: "other",
+    content_type: "post",
+    status: "draft"
+  });
+}
+
+export async function generateContentWithAI(topic: string, contentType: string = "post") {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Unauthorized")
@@ -90,7 +103,14 @@ export async function autoGenerateContent(topic: string) {
     .limit(1)
     .single()
 
-  const prompt = `Write an engaging social media post about: ${topic}. Give me just the post content directly.`;
+  const prompt = `Generate a ${contentType} about: ${topic}. 
+Return ONLY a valid JSON object with the following keys:
+- "title": A catchy title (max 50 chars)
+- "body": The main content text
+- "hashtags": A string of relevant hashtags
+- "cta": A call to action sentence
+- "tone": The tone used (e.g. Professional, Casual)
+Do not include markdown formatting or backticks around the JSON.`;
   
   const generatedText = await runAITask({
     organization_id: profile.default_organization_id,
@@ -99,14 +119,20 @@ export async function autoGenerateContent(topic: string) {
     context: { brand }
   });
 
-  // Save as draft, requiring human review
-  return await createContent({
-    title: `Generated: ${topic.substring(0, 30)}...`,
-    body: generatedText,
-    platform: "other",
-    content_type: "post",
-    status: "draft"
-  });
+  try {
+    const rawText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(rawText);
+  } catch (e) {
+    console.error("Failed to parse AI generated content:", e);
+    // Fallback if AI didn't return JSON
+    return {
+      title: `Generated: ${topic.substring(0, 30)}...`,
+      body: generatedText,
+      hashtags: "",
+      cta: "",
+      tone: "Neutral"
+    };
+  }
 }
 
 export async function submitForReview(contentId: string) {
@@ -139,7 +165,7 @@ export async function submitForReview(contentId: string) {
   return { success: true }
 }
 
-export async function approveContent(contentId: string, scheduleToCalendar?: boolean, platform?: string, scheduledAt?: string) {
+export async function approveContent(contentId: string, scheduleToCalendar?: boolean, platform?: string, scheduledAt?: string, isAutoPost?: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Unauthorized")
@@ -176,6 +202,7 @@ export async function approveContent(contentId: string, scheduleToCalendar?: boo
         platform: platform || content.platform || 'other',
         scheduled_at: scheduledAt || new Date(Date.now() + 86400000).toISOString(), // Use provided or fallback
         status: "scheduled",
+        is_auto_post: isAutoPost || false,
         created_by: user.id
       })
       
@@ -184,5 +211,68 @@ export async function approveContent(contentId: string, scheduleToCalendar?: boo
 
   revalidatePath("/dashboard/contents")
   revalidatePath("/dashboard/calendar")
+  return { success: true }
+}
+
+export async function deleteContent(contentId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: content, error } = await supabase
+    .from("contents")
+    .update({ 
+      deleted_at: new Date().toISOString(),
+      updated_by: user.id
+    })
+    .eq("id", contentId)
+    .select("organization_id")
+    .single()
+
+  if (error) throw error
+
+  await createAuditLog({
+    organization_id: content.organization_id,
+    table_name: "contents",
+    record_id: contentId,
+    action: "delete",
+    new_data: { deleted_at: new Date().toISOString() }
+  })
+
+  revalidatePath("/dashboard/contents")
+  return { success: true }
+}
+
+export async function updateContent(contentId: string, payload: any) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: content, error } = await supabase
+    .from("contents")
+    .update({ 
+      title: payload.title,
+      body: payload.body,
+      platform: payload.platform,
+      content_type: payload.content_type,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id
+    })
+    .eq("id", contentId)
+    .select("organization_id")
+    .single()
+
+  if (error) throw error
+
+  await createAuditLog({
+    organization_id: content.organization_id,
+    table_name: "contents",
+    record_id: contentId,
+    action: "update",
+    new_data: { ...payload, updated_at: new Date().toISOString() }
+  })
+
+  revalidatePath("/dashboard/contents")
+  revalidatePath(`/dashboard/contents/${contentId}`)
   return { success: true }
 }

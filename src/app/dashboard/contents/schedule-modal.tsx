@@ -14,7 +14,7 @@ export function ScheduleModal({
 }: { 
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSchedule: (platform: string, scheduledAt: string) => Promise<void>
+  onSchedule: (platform: string, scheduledAt: string, isAutoPost: boolean) => Promise<void>
   defaultPlatform?: string
 }) {
   const [platform, setPlatform] = useState(defaultPlatform || "instagram")
@@ -27,13 +27,14 @@ export function ScheduleModal({
   const [scheduledAt, setScheduledAt] = useState(
     new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0,16)
   )
+  const [isAutoPost, setIsAutoPost] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      await onSchedule(platform, new Date(scheduledAt).toISOString())
+      await onSchedule(platform, new Date(scheduledAt).toISOString(), isAutoPost)
       onOpenChange(false)
     } catch (error) {
       console.error(error)
@@ -74,6 +75,18 @@ export function ScheduleModal({
               onChange={(e) => setScheduledAt(e.target.value)}
               required
             />
+          </div>
+          <div className="flex items-center gap-2 mt-4">
+            <input 
+              type="checkbox" 
+              id="autoPost" 
+              checked={isAutoPost} 
+              onChange={(e) => setIsAutoPost(e.target.checked)}
+              className="w-4 h-4 text-primary bg-surface-container border-outline-variant rounded focus:ring-primary"
+            />
+            <label htmlFor="autoPost" className="text-sm text-on-surface-variant font-medium">
+              Enable Auto Post (publish automatically when scheduled time arrives)
+            </label>
           </div>
           <AlertModalFooter className="mt-6 border-none px-0 pb-0">
             <AlertModalCancel type="button">Cancel</AlertModalCancel>

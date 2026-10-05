@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { submitForReview, approveContent } from "./actions"
-import { Send, CheckCircle, Calendar } from "lucide-react"
+import { submitForReview, approveContent, deleteContent } from "./actions"
+import { Send, CheckCircle, Calendar, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScheduleModal } from "./schedule-modal"
 
@@ -43,8 +43,24 @@ export function ContentActions({ contentId, status, defaultPlatform }: { content
     }
   }
 
-  const handleScheduleConfirm = async (platform: string, scheduledAt: string) => {
-    await approveContent(contentId, true, platform, scheduledAt)
+  const handleScheduleConfirm = async (platform: string, scheduledAt: string, isAutoPost: boolean) => {
+    await approveContent(contentId, true, platform, scheduledAt, isAutoPost)
+  }
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm("Are you sure you want to delete this content?")) return
+    
+    setIsLoading(true)
+    try {
+      await deleteContent(contentId)
+    } catch (error) {
+      console.error(error)
+      alert("Failed to delete content")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   if (status === "draft") {
@@ -98,5 +114,15 @@ export function ContentActions({ contentId, status, defaultPlatform }: { content
     )
   }
 
-  return null
+  return (
+    <Button 
+      onClick={handleDelete}
+      disabled={isLoading}
+      variant="outline"
+      size="sm"
+      className="text-error hover:bg-error/10 hover:text-error border-transparent"
+    >
+      <Trash2 className="w-3.5 h-3.5" />
+    </Button>
+  )
 }

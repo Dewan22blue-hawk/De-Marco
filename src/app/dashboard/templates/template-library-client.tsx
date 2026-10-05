@@ -5,7 +5,7 @@ import React, { useState, useCallback, useEffect, useTransition } from "react"
 import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { 
-  Search, ImagePlus, FileText, ChevronDown, LayoutGrid, LayoutList, 
+  Search, ImagePlus, FileText, LayoutGrid, LayoutList, 
   Copy, Archive, Trash2, Layout, CheckSquare, Square, X, Loader2, Pencil
 } from "lucide-react"
 import { archiveTemplate, cloneTemplate, deleteTemplate } from "./actions"

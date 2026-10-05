@@ -47,7 +47,7 @@ export default async function ContentsPage(props: {
       {contents && contents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contents.map(content => (
-            <div key={content.id} className="clay-card rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all duration-300">
+            <Link href={`/dashboard/contents/${content.id}`} key={content.id} className="clay-card rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all duration-300 block">
               <div className="flex justify-between items-start">
                 <h3 className="font-semibold text-lg text-on-surface line-clamp-1">{content.title}</h3>
                 <span className="text-xs font-medium px-2 py-1 bg-secondary-container text-on-secondary-container rounded-full">
@@ -57,14 +57,14 @@ export default async function ContentsPage(props: {
               <p className="text-sm text-on-surface-variant line-clamp-3 bg-surface-container-lowest p-3 rounded-lg font-mono text-xs">
                 {content.body || "No content body."}
               </p>
-              <div className="flex items-center justify-between mt-2 pt-4 border-t border-outline-variant/30">
+              <div className="flex items-center justify-between mt-2 pt-4 border-t border-outline-variant/30" onClick={(e) => e.stopPropagation()}>
                 <div className="text-xs text-on-surface-variant font-medium flex items-center gap-2">
                   <FileText className="w-3 h-3" />
                   {content.content_type} • {content.platform || "No platform"}
                 </div>
-                  <ContentActions contentId={content.id} status={content.status || "draft"} defaultPlatform={content.platform || "instagram"} />
+                <ContentActions contentId={content.id} status={content.status || "draft"} defaultPlatform={content.platform || "instagram"} />
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       ) : (
