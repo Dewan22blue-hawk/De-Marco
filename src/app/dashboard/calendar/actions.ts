@@ -16,7 +16,7 @@ export async function listCalendarEvents(opts?: { startDate?: string; endDate?: 
     .from("content_calendar")
     .select(`
       *,
-      content:contents(id, title),
+      content:contents(id, title, metadata),
       campaign:campaigns(id, name)
     `)
     .eq("organization_id", profile.default_organization_id)
@@ -82,9 +82,9 @@ export async function retryCalendarEvent(id: string) {
 
   const { data: event, error } = await supabase
     .from("content_calendar")
-    .update({ status: "scheduled", notes: null }) // Clear error notes
+    .update({ status: "scheduled", notes: null, claimed_at: null, updated_at: new Date().toISOString() }) // Clear error notes and reset lease
     .eq("id", id)
-    .eq("status", "failed") // Only allow retrying failed events
+    .in("status", ["failed", "queued"]) // Only allow retrying failed or stuck queued events
     .select()
     .single()
 
@@ -95,7 +95,7 @@ export async function retryCalendarEvent(id: string) {
     table_name: "content_calendar",
     record_id: event.id,
     action: "update",
-    new_data: { status: "scheduled", notes: null }
+    new_data: { status: "scheduled", notes: null, claimed_at: null }
   })
 
   revalidatePath("/dashboard/calendar")

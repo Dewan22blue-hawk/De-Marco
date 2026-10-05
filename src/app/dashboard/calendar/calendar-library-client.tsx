@@ -17,7 +17,8 @@ interface CalendarEvent {
   status: string
   platform: string | null
   is_auto_post?: boolean
-  content: { title: string } | null
+  claimed_at?: string | null
+  content: { title: string; metadata?: any } | null
   campaign: { name: string } | null
 }
 
@@ -55,6 +56,13 @@ export function CalendarLibraryClient({
   
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [now, setNow] = useState<number | null>(null)
+
+  useEffect(() => {
+    setNow(Date.now())
+    const interval = setInterval(() => setNow(Date.now()), 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Calendar specific state
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -362,9 +370,21 @@ export function CalendarLibraryClient({
                         'bg-surface-container text-on-surface-variant border-outline-variant/30'
                       }`}>
                         {event.status}
+                        {event.status === 'queued' && event.claimed_at && now && (
+                          <span className="ml-1 text-[10px] opacity-80">
+                            ({Math.round((now - new Date(event.claimed_at).getTime()) / 60000)}m ago)
+                          </span>
+                        )}
                       </span>
-                      {event.status === 'failed' && (
-                        <Button variant="outline" size="sm" onClick={(e) => handleRetry(event.id, e)}>Retry</Button>
+                      {event.status === 'published' && event.content?.metadata?.is_mock && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md border border-amber-200">
+                          MOCK
+                        </span>
+                      )}
+                      {(event.status === 'failed' || event.status === 'queued') && (
+                        <Button variant="outline" size="sm" onClick={(e) => handleRetry(event.id, e)}>
+                          {event.status === 'queued' ? 'Reclaim' : 'Retry'}
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -459,13 +479,27 @@ export function CalendarLibraryClient({
                             event.status === 'queued' ? 'bg-amber-500' : 'bg-primary'
                           }`} title={event.status} />
                         </div>
-                        {event.status === 'failed' && (
+                        {event.status === 'published' && event.content?.metadata?.is_mock && (
+                          <div className="mt-1">
+                            <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded border border-amber-200">
+                              MOCK
+                            </span>
+                          </div>
+                        )}
+                        {event.status === 'queued' && event.claimed_at && now && (
+                          <div className="text-[9px] text-amber-700/80 leading-none mb-1">
+                            Claimed {Math.round((now - new Date(event.claimed_at).getTime()) / 60000)}m ago
+                          </div>
+                        )}
+                        {(event.status === 'failed' || event.status === 'queued') && (
                           <div className="mt-1">
                             <button 
                               onClick={(e) => handleRetry(event.id, e)} 
-                              className="text-[10px] bg-red-50 text-red-700 px-2 py-0.5 rounded w-full hover:bg-red-100 font-medium"
+                              className={`text-[10px] px-2 py-0.5 rounded w-full font-medium transition-colors ${
+                                event.status === 'failed' ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              }`}
                             >
-                              Retry
+                              {event.status === 'queued' ? 'Reclaim' : 'Retry'}
                             </button>
                           </div>
                         )}

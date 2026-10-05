@@ -67,7 +67,8 @@
             { "name": "contentId", "value": "={{ $json.content.id }}" },
             { "name": "organizationId", "value": "={{ $json.organization_id }}" },
             { "name": "status", "value": "success" },
-            { "name": "publishedUrl", "value": "https://example.com/post-url-placeholder" }
+            { "name": "publishedUrl", "value": "https://example.com/post-url-placeholder" },
+            { "name": "is_mock", "value": "={{ true }}" }
           ]
         },
         "options": {}

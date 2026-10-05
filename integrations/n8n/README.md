@@ -67,7 +67,13 @@ Alur workflow:
 
 *Catatan: Node publikasi sosial media secara langsung belum diimplementasikan. Untuk tahap MVP ini, webhook hanya akan menandai status (Stub) dan menggunakan URL placeholder. Integrasi nyata dengan Graph API / Platform API lainnya adalah pada tahap berikutnya.*
 
-## 5. Kontrak Webhook
+## 5. Mekanisme Lease & Stub (Keamanan & Keandalan)
+
+- **Lease Reclaim (10 Menit):** Ketika n8n meng-claim jadwal, status berubah dari `scheduled` menjadi `queued` dan mencatat `claimed_at`. Jika n8n crash atau gagal memberi POST balasan dalam 10 menit, jadwal tersebut bisa di-claim ulang (Reclaim) secara otomatis oleh cron atau diklaim manual melalui tombol UI, mencegah status *stuck*.
+- **Mock Publish (Stub):** Untuk saat ini, integrasi n8n hanya bersifat *mock* / stub. POST dari n8n ke Deraly harus menyertakan `"is_mock": true` di payload agar Deraly memberikan penanda UI berupa badge **"MOCK"** berwarna kuning, menjaga kejujuran status publikasi sebelum API sosial media sungguhan siap.
+- **Tahap Selanjutnya:** Publikasi ke platform sosial media nyata (menggunakan Facebook Graph API, dll.) akan dilakukan di **Tahap 5**.
+
+## 6. Kontrak Webhook
 
 ### GET (n8n mengambil jadwal)
 
@@ -105,14 +111,15 @@ Request:
   "contentId": "<content_id>",
   "organizationId": "<org_id>",
   "status": "success",
-  "publishedUrl": "https://instagram.com/p/..."
+  "publishedUrl": "https://instagram.com/p/...",
+  "is_mock": true
 }
 ```
 
 Gunakan `"status": "failed"` beserta `"error_note"` untuk laporan gagal.
 Endpoint akan mengubah status dan menulis `audit_logs`.
 
-## 6. Verifikasi Cepat
+## 7. Verifikasi Cepat
 
 ```bash
 # Tanpa token -> 401
@@ -123,7 +130,7 @@ curl -i -H "Authorization: Bearer $N8N_WEBHOOK_SECRET" \
   http://localhost:3000/api/webhooks/n8n/publish
 ```
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 - **Webhook balik ke /login**: middleware harus mengecualikan `/api/webhooks`
   dari redirect sesi (sudah ditangani di `src/middleware.ts`).

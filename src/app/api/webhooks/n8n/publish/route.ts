@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
   try {
     const payload = await request.json()
-    const { eventId, contentId, organizationId, status, publishedUrl, error_note } = payload
+    const { eventId, contentId, organizationId, status, publishedUrl, error_note, is_mock } = payload
 
     if (!eventId || !status || !contentId || !organizationId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
         .update({ 
           status: "published", 
           published_at: new Date().toISOString(),
-          metadata: { ...existingMetadata, published_url: publishedUrl }
+          metadata: { ...existingMetadata, published_url: publishedUrl, is_mock: is_mock ?? false }
         })
         .eq("id", contentId)
 
