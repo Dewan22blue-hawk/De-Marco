@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { z } from "zod"
 
 // Secure Service Role Client for Webhook (Bypasses RLS)
 const getAdminClient = () => {
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
   if (orgIds.length > 0) {
     const { data: accounts, error: accountsError } = await supabase
       .from("social_accounts")
-      .select("organization_id, platform, account_id, access_token")
+      .select("organization_id, platform, account_id, access_token, expires_at")
       .in("organization_id", orgIds as string[])
       .eq("status", "active")
 
@@ -83,20 +84,58 @@ export async function GET(request: Request) {
     return socialAccounts.find(a => a.organization_id === orgId && a.platform === platform)
   }
 
-  const enrichedEvents = claimedEvents.map((e: any) => {
+  const validEvents = [];
+
+  for (const e of claimedEvents) {
     const account = getSocialAccount(e.organization_id, e.platform);
-    return {
+    
+    let failureReason = null;
+    if (!account) {
+      failureReason = "No active social account for platform";
+    } else if (account.expires_at && new Date(account.expires_at) < new Date()) {
+      failureReason = "Social account token expired";
+    }
+
+    if (failureReason) {
+      // Mark as failed directly
+      await supabase
+        .from("content_calendar")
+        .update({ status: "failed", notes: failureReason, claimed_at: null })
+        .eq("id", e.id);
+        
+      await supabase.from("audit_logs").insert({
+        organization_id: e.organization_id,
+        table_name: "content_calendar",
+        record_id: e.id,
+        action: "update",
+        new_data: { status: "failed", notes: failureReason },
+        user_agent: "n8n-webhook-service"
+      });
+      continue;
+    }
+
+    validEvents.push({
       ...e,
       content: e.content_id ? contentsMap.get(e.content_id) : null,
-      social_account: account ? {
+      social_account: {
         account_id: account.account_id,
         access_token: account.access_token
-      } : null
-    }
-  })
+      }
+    });
+  }
 
-  return NextResponse.json({ data: enrichedEvents })
+  return NextResponse.json({ data: validEvents })
 }
+
+const WebhookPayloadSchema = z.object({
+  eventId: z.string().uuid(),
+  contentId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+  status: z.enum(["success", "failed"]),
+  publishedUrl: z.string().url().optional().or(z.literal("")),
+  error_note: z.string().max(2000).optional(),
+  is_mock: z.boolean().optional()
+});
 
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
@@ -104,12 +143,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = await request.json()
-    const { eventId, contentId, organizationId, status, publishedUrl, error_note, is_mock } = payload
-
-    if (!eventId || !status || !contentId || !organizationId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    const jsonPayload = await request.json()
+    const parseResult = WebhookPayloadSchema.safeParse(jsonPayload)
+    
+    if (!parseResult.success) {
+      return NextResponse.json({ error: "Invalid payload", details: parseResult.error.issues }, { status: 400 })
     }
+
+    const { eventId, contentId, organizationId, status, publishedUrl, error_note, is_mock } = parseResult.data
 
     const supabase = getAdminClient()
 
@@ -130,6 +171,7 @@ export async function POST(request: Request) {
         .from("content_calendar")
         .update({ status: "published" })
         .eq("id", eventId)
+        .in("status", ["queued", "scheduled"])
 
       // Fetch existing metadata to merge
       const { data: currentContent } = await supabase
@@ -168,9 +210,11 @@ export async function POST(request: Request) {
         .from("content_calendar")
         .update({ 
           status: "failed",
-          notes: error_note || "Publishing failed via n8n"
+          notes: error_note || "Publishing failed via n8n",
+          claimed_at: null
         })
         .eq("id", eventId)
+        .in("status", ["queued", "scheduled"])
 
       // Log to audit
       await supabase.from("audit_logs").insert({

@@ -21,6 +21,9 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "De-Marco Studio — Marketing Intelligence & Performance Platform",
   description: "Enterprise Marketing Platform",
+  icons: {
+    icon: "/logo-deraly.png",
+  },
 };
 
 export default function RootLayout({

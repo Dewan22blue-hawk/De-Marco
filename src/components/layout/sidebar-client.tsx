@@ -1,17 +1,18 @@
 'use client'
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { UserMenu } from "@/components/layout/user-menu"
 import { useSidebar } from "./sidebar-provider"
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  Sparkles, 
-  Palette, 
-  Users, 
-  Settings, 
+import {
+  LayoutDashboard,
+  FolderKanban,
+  Sparkles,
+  Palette,
+  Users,
+  Settings,
   PlusCircle,
   X,
   ShieldCheck,
@@ -56,17 +57,32 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
       )}>
         <div className={cn("flex flex-col gap-6", collapsed ? "w-full items-center" : "w-full")}>
           {/* Brand & Workspace Header */}
-          <div className={cn("flex items-center gap-3 pt-1", collapsed ? "px-0 justify-center" : "px-2")}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white shadow-md shadow-primary/20 shrink-0">
-              <Sparkles className="w-5 h-5 text-white" />
+          <div className="flex flex-col items-center justify-center gap-4 pt-4 pb-2 w-full">
+            <div className="relative group cursor-pointer flex justify-center">
+              {/* Subtle premium glow effect on hover */}
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <Image
+                src="/logo-deraly.png"
+                alt="De-Marco Logo"
+                width={160}
+                height={50}
+                className={cn(
+                  "relative z-10 shrink-0 object-contain drop-shadow-md transition-transform duration-500 group-hover:scale-[1.03]",
+                  collapsed ? "w-10 h-10" : "w-40 h-auto max-h-16 object-center"
+                )}
+                priority
+              />
             </div>
+            
             {!collapsed && (
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-lg font-bold text-on-surface tracking-tight leading-tight whitespace-nowrap">De-Marco Studio</span>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0"></span>
-                  <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold truncate">{organizationName || "Enterprise"}</span>
-                </div>
+              <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-surface-container-high/40 dark:bg-slate-900/40 rounded-full border border-outline-variant/50 backdrop-blur-sm shadow-sm transition-all hover:border-primary/40 hover:bg-surface-container-high/60 cursor-default">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-on-surface font-bold truncate">
+                  {organizationName || "Enterprise"}
+                </span>
               </div>
             )}
           </div>
@@ -96,7 +112,7 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
                   <Link href={item.href} onClick={() => isMobile && setIsMobileOpen(false)} className={cn(
                     "flex items-center rounded-xl transition-all duration-150 w-full",
                     collapsed ? "justify-center p-2.5 w-10 h-10" : "px-3 py-2.5 gap-3",
-                    isActive 
+                    isActive
                       ? "bg-primary-container text-on-primary-container font-semibold shadow-sm dark:bg-sky-950/60 dark:text-sky-300"
                       : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container font-medium"
                   )}>
@@ -141,11 +157,11 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
               </div>
             )}
           </div>
-          
+
           {/* Toggle Collapse Button (Desktop Only) */}
           {!isMobile && (
             <div className="hidden md:flex w-full relative group">
-              <button 
+              <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className={cn(
                   "flex items-center rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors w-full",
@@ -165,7 +181,7 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
 
           {/* User Profile */}
           <div className={cn("w-full", collapsed ? "flex justify-center" : "")}>
-             <UserMenu userProfile={userProfile} collapsed={collapsed} />
+            <UserMenu userProfile={userProfile} collapsed={collapsed} />
           </div>
         </div>
       </aside>
@@ -183,30 +199,30 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
       <AnimatePresence>
         {isMobileOpen && (
           <div className="md:hidden fixed inset-0 z-[60] flex">
-             <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               onClick={() => setIsMobileOpen(false)}
-               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
-             />
-             <motion.div
-               initial={{ x: "-100%" }}
-               animate={{ x: 0 }}
-               exit={{ x: "-100%" }}
-               transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-               className="relative z-[70] h-full"
-             >
-               <div className="absolute top-4 -right-12">
-                 <button 
-                   onClick={() => setIsMobileOpen(false)}
-                   className="p-2 rounded-full bg-surface text-on-surface shadow-lg"
-                 >
-                   <X className="w-6 h-6" />
-                 </button>
-               </div>
-               {renderContent(true)}
-             </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileOpen(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
+            />
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className="relative z-[70] h-full"
+            >
+              <div className="absolute top-4 -right-12">
+                <button
+                  onClick={() => setIsMobileOpen(false)}
+                  className="p-2 rounded-full bg-surface text-on-surface shadow-lg"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              {renderContent(true)}
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

@@ -149,8 +149,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        1500,
-        300
+        1700,
+        200
       ]
     },
     {
@@ -171,15 +171,15 @@
           "parameters": [
             {
               "name": "eventId",
-              "value": "={{ $json.id }}"
+              "value": "={{ $('Has Content?').item.json.id }}"
             },
             {
               "name": "contentId",
-              "value": "={{ $json.content.id }}"
+              "value": "={{ $('Has Content?').item.json.content.id }}"
             },
             {
               "name": "organizationId",
-              "value": "={{ $json.organization_id }}"
+              "value": "={{ $('Has Content?').item.json.organization_id }}"
             },
             {
               "name": "status",
@@ -187,7 +187,7 @@
             },
             {
               "name": "error_note",
-              "value": "Unsupported platform or failing stub"
+              "value": "={{ $json.error?.message || 'Unsupported platform or failing stub' }}"
             }
           ]
         },
@@ -197,8 +197,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        1350,
-        450
+        1700,
+        400
       ]
     },
     {
@@ -231,7 +231,8 @@
       "position": [
         1250,
         100
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -263,7 +264,8 @@
       "position": [
         1250,
         300
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -311,6 +313,26 @@
       "position": [
         1250,
         500
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Check Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        300
       ]
     }
   ],
@@ -396,7 +418,7 @@
       "main": [
         [
           {
-            "node": "Update Status (Success)",
+            "node": "Check Error",
             "type": "main",
             "index": 0
           }
@@ -407,7 +429,7 @@
       "main": [
         [
           {
-            "node": "Update Status (Success)",
+            "node": "Check Error",
             "type": "main",
             "index": 0
           }
@@ -416,6 +438,24 @@
     },
     "Post to LinkedIn": {
       "main": [
+        [
+          {
+            "node": "Check Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Error": {
+      "main": [
+        [
+          {
+            "node": "Update Status (Failed)",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Update Status (Success)",

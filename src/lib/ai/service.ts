@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { GeminiProvider } from "./gemini-provider";
-import { AITaskType, AIContext } from "./types";
+import { AITaskType, AIContext, AIDesignRequest } from "./types";
 import { createAuditLog } from "@/lib/audit";
 import { z } from "zod";
+import { DesignOutputSchema, DesignOutput } from "@/schemas/ai-content";
 
 export async function runAITask<T = any>(opts: {
   organization_id: string;
@@ -194,5 +195,70 @@ Return ONLY a valid JSON object mapping variable IDs to their generated values (
     console.error("Failed to parse AI variable values:", e);
     return {};
   }
+}
+
+export async function generateHybridDesign(opts: {
+  organization_id: string;
+  request: AIDesignRequest;
+}): Promise<DesignOutput> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  let assets = opts.request.assets;
+  if (!assets) {
+    const { data: fetchedAssets } = await supabase
+      .from("assets")
+      .select("id, name, asset_type, tags, description")
+      .eq("organization_id", opts.organization_id)
+      .eq("status", "active")
+      .limit(50);
+    assets = fetchedAssets || [];
+  }
+
+  let template = null;
+  if (opts.request.templateId) {
+    const { data: fetchedTemplate } = await supabase
+      .from("templates")
+      .select("*")
+      .eq("id", opts.request.templateId)
+      .single();
+    template = fetchedTemplate;
+  }
+
+  const fullPrompt = opts.request.prompt;
+  let taskInstruction = "";
+
+  if (template) {
+    taskInstruction = `You are an expert graphic designer and template engine. Fill these template variables and adjust the layout based on the user's brief.
+Template Name: ${template.name}
+Template Dimensions: ${template.width}x${template.height} ${template.unit}
+Template Elements: ${JSON.stringify(template.elements)}
+Template Variables: ${JSON.stringify(template.template_variables)}
+Instructions: Return a complete updated DesignOutput matching the requested schema. Map the user's content and assets to the appropriate template variables, preserving IDs where applicable.`;
+  } else {
+    taskInstruction = `You are an expert graphic designer. Create a complete, beautiful design layout from scratch based on the user brief.
+Requested Dimensions: ${opts.request.dimension?.width || 1080}x${opts.request.dimension?.height || 1080} px.
+Instructions: Return a complete DesignOutput matching the requested schema with all elements appropriately positioned, sized, and styled.`;
+  }
+
+  if (assets && assets.length > 0) {
+    taskInstruction += `\n\nAvailable Asset IDs for image/logo usage:\n`;
+    taskInstruction += assets.map((a: any) => `- ${a.id} (${a.asset_type}): ${a.name} [Tags: ${a.tags?.join(', ') || 'N/A'}]`).join('\n');
+  }
+
+  const promptToSend = `${taskInstruction}\n\nUser Brief: ${fullPrompt}`;
+
+  return runAITask<DesignOutput>({
+    organization_id: opts.organization_id,
+    task_type: "design_suggestion",
+    prompt: promptToSend,
+    context: {
+      assets,
+      template,
+      brand: opts.request.brandContext
+    },
+    schema: DesignOutputSchema,
+  });
 }
 

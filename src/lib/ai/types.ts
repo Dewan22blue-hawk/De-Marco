@@ -29,3 +29,19 @@ export interface AIContext {
   campaign?: any;
   userGoal?: string;
 }
+
+export interface AssetContext {
+  id: string;
+  name: string;
+  asset_type: string;
+  tags?: string[];
+  description?: string;
+}
+
+export interface AIDesignRequest {
+  prompt: string;
+  dimension?: { width: number; height: number };
+  templateId?: string;
+  assets?: AssetContext[];
+  brandContext?: any;
+}
