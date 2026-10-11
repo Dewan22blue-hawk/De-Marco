@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Move, Maximize2, RotateCw, Lock, Unlock, Eye, EyeOff } from "lucide-react"
+import { parseElementContent } from "@/lib/design/content"
 
 interface Element {
   id: string
@@ -214,7 +215,7 @@ export function CanvasEditor({
               {/* Element Content Renderers */}
               {el.element_type === 'text' && (
                 <div style={{ width: '100%', height: '100%', display: 'flex', ...(el.style as any) }}>
-                  {el.content?.text || 'Text'}
+                  {parseElementContent(el.content).text || 'Text'}
                 </div>
               )}
               {el.element_type === 'shape' && (
@@ -226,12 +227,12 @@ export function CanvasEditor({
                   ...el.style
                 }} />
               )}
-              {el.element_type === 'image' && el.asset_id && (
-                 <div className="w-full h-full bg-neutral-100 flex items-center justify-center overflow-hidden border border-outline-variant/10">
-                   {assetMap[el.asset_id]?.url ? (
+              {el.element_type === 'image' && (
+                 <div className="w-full h-full bg-surface-container-high/50 flex items-center justify-center overflow-hidden border border-outline-variant/30 rounded-md">
+                   {el.asset_id && assetMap[el.asset_id]?.url ? (
                      <img src={assetMap[el.asset_id].url} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
                    ) : (
-                     <span className="text-[10px] text-outline font-bold uppercase">{el.element_type}</span>
+                     <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest px-2 py-1 bg-surface/50 rounded">{el.content?.placeholder || 'Image Frame'}</span>
                    )}
                  </div>
               )}

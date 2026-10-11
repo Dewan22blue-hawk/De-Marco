@@ -438,3 +438,240 @@ export async function magicFillDesignVariables(templateId: string, context: stri
   return variableValues
 }
 
+export async function generateAIDesignDraft(input: {
+  prompt: string
+  dimension?: { width: number; height: number }
+  templateId?: string
+  campaignId?: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
+  if (!profile?.default_organization_id) throw new Error("No organization assigned")
+
+  const { generateHybridDesign } = await import("@/lib/ai/service")
+  
+  // Guard
+  const { hasPermission } = await import("@/lib/auth/authorization")
+  const isAllowed = await hasPermission("designs.create")
+  if (!isAllowed) throw new Error("Forbidden")
+
+  // Verify campaignId org-scoped if provided (anti-IDOR)
+  let verifiedCampaignId: string | undefined = undefined
+  if (input.campaignId) {
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("id")
+      .eq("id", input.campaignId)
+      .eq("organization_id", profile.default_organization_id)
+      .is("deleted_at", null)
+      .maybeSingle()
+    if (campaign) {
+      verifiedCampaignId = campaign.id
+    } else {
+      console.warn("Campaign not found or not in organization for AI draft:", input.campaignId)
+    }
+  }
+
+  // Get active brand kit
+  const { data: brandKit } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("organization_id", profile.default_organization_id)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle()
+
+  // Get active assets
+  const { data: assets } = await supabase
+    .from("assets")
+    .select("id, name, asset_type, tags, description, storage_bucket, storage_path")
+    .eq("organization_id", profile.default_organization_id)
+    .is("deleted_at", null)
+    .limit(50)
+
+  return await generateHybridDesign({
+    organization_id: profile.default_organization_id,
+    request: {
+      prompt: input.prompt,
+      dimension: input.dimension,
+      templateId: input.templateId,
+      campaignId: verifiedCampaignId,
+      assets: assets || [],
+      brandContext: brandKit
+    }
+  })
+}
+
+export async function createDesignFromAIDraft(input: {
+  name: string
+  output: any
+  previewAssetId: string
+  campaignId?: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
+  if (!profile?.default_organization_id) throw new Error("No organization assigned")
+
+  const orgId = profile.default_organization_id
+
+  const { hasPermission } = await import("@/lib/auth/authorization")
+  const isAllowed = await hasPermission("designs.create")
+  if (!isAllowed) throw new Error("Forbidden")
+
+  const { DesignOutputSchema } = await import("@/schemas/ai-content")
+  const validated = DesignOutputSchema.safeParse(input.output)
+  if (!validated.success) throw new Error("Invalid design output format")
+
+  const output = validated.data
+
+  // Verify previewAssetId
+  const { data: previewAsset } = await supabase
+    .from("assets")
+    .select("id")
+    .eq("id", input.previewAssetId)
+    .eq("organization_id", orgId)
+    .maybeSingle()
+
+  if (!previewAsset) throw new Error("Invalid preview asset")
+
+  // P0 anti-IDOR for element assets
+  const assetIds = output.elements.map(el => el.asset_id).filter(Boolean) as string[]
+  const validAssetIds = new Set<string>()
+  if (assetIds.length > 0) {
+    const { data: validAssets } = await supabase
+      .from("assets")
+      .select("id")
+      .eq("organization_id", orgId)
+      .in("id", assetIds)
+    
+    if (validAssets) {
+      validAssets.forEach(a => validAssetIds.add(a.id))
+    }
+  }
+
+  // Get brand kit to associate if any
+  const { data: brandKit } = await supabase
+    .from("brands")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("is_active", true)
+    .maybeSingle()
+
+  const formatCode = `AI-${Date.now()}`
+
+  // Insert Design
+  const { data: design, error: designError } = await supabase
+    .from("designs")
+    .insert({
+      organization_id: orgId,
+      name: input.name,
+      design_type: output.design_type || 'social_post',
+      format_code: formatCode,
+      width: output.width || 1080,
+      height: output.height || 1080,
+      unit: 'px',
+      brand_id: brandKit?.id || null,
+      status: "draft",
+      preview_asset_id: input.previewAssetId,
+      current_version: 1,
+      created_by: user.id
+    })
+    .select()
+    .single()
+
+  if (designError) throw designError
+
+  // Insert elements
+  const elementsToInsert = output.elements.map((el, index) => {
+    let finalAssetId = el.asset_id || null
+    if (finalAssetId && !validAssetIds.has(finalAssetId)) {
+      console.warn(`Asset ID ${finalAssetId} is invalid or not owned by org. Dropping from element.`)
+      finalAssetId = null
+    }
+
+    return {
+      design_id: design.id,
+      element_type: el.type,
+      asset_id: finalAssetId,
+      x: el.x,
+      y: el.y,
+      width: el.width,
+      height: el.height,
+      rotation: el.rotation ?? 0,
+      opacity: el.opacity ?? 1,
+      z_index: el.z_index ?? index,
+      visible: true,
+      locked: false,
+      content: el.content ? JSON.stringify({ text: el.content }) : null,
+      style: el.style || {},
+      metadata: {},
+      created_by: user.id
+    }
+  })
+
+  if (elementsToInsert.length > 0) {
+    const { error: elementsError } = await supabase.from("design_elements").insert(elementsToInsert)
+    if (elementsError) console.error("Error inserting design elements:", elementsError)
+  }
+
+  // Insert Version
+  await supabase
+    .from("design_versions")
+    .insert({
+      design_id: design.id,
+      version: 1,
+      snapshot: output,
+      created_by: user.id
+    })
+
+  // Link to campaign if provided
+  if (input.campaignId) {
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("id")
+      .eq("id", input.campaignId)
+      .eq("organization_id", orgId)
+      .is("deleted_at", null)
+      .maybeSingle()
+
+    if (campaign) {
+      const canUpdateCampaign = await hasPermission("campaigns.update")
+      if (canUpdateCampaign) {
+        const { error: linkError } = await supabase
+          .from("campaign_designs")
+          .insert({
+            campaign_id: campaign.id,
+            design_id: design.id,
+            role: "primary",
+            added_by: user.id,
+          })
+        if (linkError && linkError.code !== "23505") {
+          console.error("Failed to link design to campaign:", linkError)
+        }
+      } else {
+        console.warn("User lacks campaigns.update permission; skipping campaign link for design:", design.id)
+      }
+    } else {
+      console.warn("Campaign not found or not in organization; skipping campaign link for design:", input.campaignId)
+    }
+  }
+
+  await createAuditLog({
+    organization_id: orgId,
+    table_name: "designs",
+    record_id: design.id,
+    action: "create",
+    new_data: { type: 'ai_generated', id: design.id }
+  })
+
+  revalidatePath("/dashboard/designs")
+  return { success: true, design: { id: design.id } }
+}
+
+

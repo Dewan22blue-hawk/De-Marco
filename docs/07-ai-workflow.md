@@ -5,8 +5,9 @@
 ---
 
 ### 1. DATA MODEL & SECURITY (P0)
-- **API Key Management**: Implementasikan penyimpanan `GEMINI_API_KEY` di level organisasi (tabel `settings`). 
+- **API Key Management**: Implementasikan penyimpanan `GEMINI_API_KEY` di level organisasi (tabel `settings` / `ai_settings`). 
   - Gunakan `supabase/migrations/20261005000004_ai_settings_vault.sql` untuk membuat tabel/setting konfigurasi AI yang terproteksi.
+  - **Environment Variable**: Sistem mensyaratkan variabel `AI_KEY_ENCRYPTION_SECRET` (string 32-karakter) untuk mengenkripsi API Key per organisasi di tingkat aplikasi (berbasis AES-256-GCM) sehingga aman disimpan ke basis data.
 - **RBAC**: Pastikan hanya user dengan permission `designs.create` yang bisa memanggil AI Generator.
 
 ### 2. AI DESIGN ENGINE (P1)

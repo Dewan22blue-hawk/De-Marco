@@ -37,10 +37,16 @@ export class GeminiProvider implements AIProvider {
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const u = data.usageMetadata;
 
     return {
       text,
       raw: data,
+      usage: {
+        promptTokens: u?.promptTokenCount ?? 0,
+        completionTokens: u?.candidatesTokenCount ?? 0,
+        totalTokens: u?.totalTokenCount ?? 0,
+      },
     };
   }
 }

@@ -8,19 +8,35 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { CustomSelect } from "@/components/ui/custom-select"
 
-export function CreateContentForm() {
+export function CreateContentForm({
+  campaigns = [],
+  canLinkCampaigns = false,
+}: {
+  campaigns?: { id: string; name: string }[]
+  canLinkCampaigns?: boolean
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   
+  const initialCampaignId = searchParams.get("campaign_id") || ""
+  const [campaignId, setCampaignId] = useState(initialCampaignId)
+
   const [formData, setFormData] = useState({
     title: searchParams.get("title") || "",
     body: searchParams.get("body") || "",
-    platform: "other",
-    content_type: "post",
+    platform: searchParams.get("platform") || "other",
+    content_type: searchParams.get("content_type") || "post",
     status: "draft"
   })
+
+  const selectedCampaign = campaigns.find(c => c.id === campaignId)
+
+  const campaignOptions = [
+    { value: "", label: "No campaign" },
+    ...campaigns.map(c => ({ value: c.id, label: c.name }))
+  ]
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -38,7 +54,11 @@ export function CreateContentForm() {
 
     startTransition(async () => {
       try {
-        const res = await createContent(formData)
+        const payload: any = {
+          ...formData,
+          campaign_id: canLinkCampaigns && campaignId ? campaignId : undefined,
+        }
+        const res = await createContent(payload)
         if (res.success) {
           router.push("/dashboard/contents")
         }
@@ -53,6 +73,31 @@ export function CreateContentForm() {
       {error && (
         <div className="p-4 bg-error-container text-on-error-container border border-error rounded-xl text-sm font-medium">
           {error}
+        </div>
+      )}
+
+      {initialCampaignId && (
+        <div className={`p-4 rounded-xl border flex flex-col gap-1 ${
+          canLinkCampaigns 
+            ? "bg-primary/5 border-primary/20 text-on-surface"
+            : "bg-surface-container-high border-outline-variant/30 text-on-surface-variant"
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">
+              Campaign Association
+            </span>
+            {!canLinkCampaigns && (
+              <span className="text-xs text-rose-500 font-semibold">Read-only (No permission)</span>
+            )}
+          </div>
+          <p className="text-sm font-semibold">
+            {selectedCampaign?.name || "Linked Campaign"}
+          </p>
+          {!canLinkCampaigns && (
+            <p className="text-xs text-on-surface-variant">
+              You lack campaign update permissions; this content will be created without linking to the campaign.
+            </p>
+          )}
         </div>
       )}
 
@@ -82,7 +127,7 @@ export function CreateContentForm() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-semibold text-on-surface">Platform</label>
             <CustomSelect 
@@ -115,6 +160,23 @@ export function CreateContentForm() {
               ]}
             />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-semibold text-on-surface">Campaign</label>
+          <CustomSelect 
+            name="campaign_id"
+            value={canLinkCampaigns ? campaignId : (initialCampaignId ? initialCampaignId : "")}
+            onChange={(val) => setCampaignId(val)}
+            options={campaignOptions}
+            disabled={!canLinkCampaigns}
+            placeholder="No campaign"
+          />
+          {!canLinkCampaigns && (
+            <p className="text-xs text-on-surface-variant/80">
+              Only Campaign Managers can link content to a campaign.
+            </p>
+          )}
         </div>
       </div>
 

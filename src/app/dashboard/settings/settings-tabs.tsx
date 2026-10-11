@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 const tabs = [
   { name: "Organization", href: "/dashboard/settings/organization", icon: "domain" },
   { name: "Members & Roles", href: "/dashboard/settings/members", icon: "group" },
+  { name: "AI Integration", href: "/dashboard/settings/ai", icon: "psychiatry" },
   { name: "Social Accounts", href: "/dashboard/settings/social", icon: "share" },
   { name: "Personal Profile", href: "/dashboard/settings/profile", icon: "person" },
 ]

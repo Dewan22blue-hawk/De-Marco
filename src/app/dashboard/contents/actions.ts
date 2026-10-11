@@ -43,13 +43,18 @@ export async function createContent(payload: any) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Unauthorized")
 
+  const { hasPermission } = await import("@/lib/auth/authorization")
+  const isAllowed = await hasPermission("contents.create")
+  if (!isAllowed) throw new Error("Forbidden")
+
   const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
   if (!profile?.default_organization_id) throw new Error("No organization assigned")
+  const organizationId = profile.default_organization_id
 
   const { data: content, error } = await supabase
     .from("contents")
     .insert({
-      organization_id: profile.default_organization_id,
+      organization_id: organizationId,
       title: payload.title,
       body: payload.body,
       platform: payload.platform,
@@ -63,8 +68,39 @@ export async function createContent(payload: any) {
 
   if (error) throw error
 
+  // If campaign_id is provided, securely link to campaign
+  if (payload.campaign_id) {
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("id")
+      .eq("id", payload.campaign_id)
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null)
+      .maybeSingle()
+
+    if (campaign) {
+      const canUpdateCampaign = await hasPermission("campaigns.update")
+      if (canUpdateCampaign) {
+        const { error: linkError } = await supabase
+          .from("campaign_contents")
+          .insert({
+            campaign_id: campaign.id,
+            content_id: content.id,
+            added_by: user.id
+          })
+        if (linkError && linkError.code !== "23505") {
+          console.error("Failed to link content to campaign:", linkError)
+        }
+      } else {
+        console.warn("User lacks campaigns.update permission; skipping campaign link for content:", content.id)
+      }
+    } else {
+      console.warn("Campaign not found or not in organization; skipping campaign link:", payload.campaign_id)
+    }
+  }
+
   await createAuditLog({
-    organization_id: profile.default_organization_id,
+    organization_id: organizationId,
     table_name: "contents",
     record_id: content.id,
     action: "create",
@@ -73,12 +109,6 @@ export async function createContent(payload: any) {
 
   revalidatePath("/dashboard/contents")
   return { success: true, content }
-}
-
-export async function autoGenerateContent(topic: string, contentType: string = "post") {
-  // Legacy function: generates and saves as draft immediately
-  const { content } = await generateContentWithAI(topic, contentType)
-  return { success: true, content };
 }
 
 export async function generateContentWithAI(
@@ -90,6 +120,10 @@ export async function generateContentWithAI(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
+  const { hasPermission } = await import("@/lib/auth/authorization")
+  const isAllowed = await hasPermission("contents.create")
+  if (!isAllowed) throw new Error("Forbidden")
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("default_organization_id")
@@ -99,40 +133,48 @@ export async function generateContentWithAI(
   if (!profile?.default_organization_id) throw new Error("No organization assigned");
   const organizationId = profile.default_organization_id;
 
-  const prompt = `Generate a ${contentType} about: ${topic}`;
+  const { data: brandKit } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle()
+
+  let campaign = null
+  if (campaignId) {
+    const { data: campaignData } = await supabase
+      .from("campaigns")
+      .select("id, name, code, objective, target_audience, description")
+      .eq("id", campaignId)
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null)
+      .maybeSingle()
+    campaign = campaignData
+  }
+
+  let prompt = `Generate a ${contentType} about: ${topic}`;
+  if (campaign) {
+    const campaignDetails: string[] = []
+    if (campaign.name) campaignDetails.push(`Campaign Name: ${campaign.name}`)
+    if (campaign.code) campaignDetails.push(`Campaign Code: ${campaign.code}`)
+    if (campaign.objective) campaignDetails.push(`Objective: ${campaign.objective}`)
+    if (campaign.target_audience) campaignDetails.push(`Target Audience: ${campaign.target_audience}`)
+    if (campaign.description) campaignDetails.push(`Description: ${campaign.description}`)
+    if (campaignDetails.length > 0) {
+      prompt += `\n\nCampaign Context:\n${campaignDetails.join("\n")}`
+    }
+  }
 
   const generated = await runAITask({
     organization_id: organizationId,
     task_type: "content_generation",
-    context: { brand: null, campaign: campaignId ? { id: campaignId } : undefined } as any,
+    context: { brand: brandKit, campaign: campaign || undefined } as any,
     prompt,
     schema: GeneratedContentSchema
   });
 
-  // Since runAITask with schema already validates, `generated` is already parsed and typed.
-  const validated = generated;
-
-  // Insert into contents as draft
-  const { data: content, error } = await supabase
-    .from("contents")
-    .insert({
-      organization_id: organizationId,
-      title: validated.title,
-      body: validated.body,
-      platform: "instagram",
-      content_type: validated.content_type,
-      status: "draft",
-      cta: validated.cta,
-      hashtags: validated.hashtags,
-      created_by: user.id,
-      owner_id: user.id
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return { content, generated };
+  return { generated };
 }
 
 export async function submitForReview(contentId: string) {

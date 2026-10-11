@@ -16,6 +16,7 @@ interface CustomSelectProps {
   className?: string
   dropdownClassName?: string
   name?: string
+  disabled?: boolean
 }
 
 export function CustomSelect({
@@ -25,7 +26,8 @@ export function CustomSelect({
   placeholder = "Select an option",
   className = "",
   dropdownClassName = "",
-  name
+  name,
+  disabled = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -47,18 +49,24 @@ export function CustomSelect({
       {name && <input type="hidden" name={name} value={value} />}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`w-full flex items-center justify-between gap-2 px-4 py-3 rounded-2xl bg-surface-container-low border transition-colors text-sm font-medium ${
-          isOpen ? "border-primary text-primary" : "border-outline-variant/30 text-on-surface hover:border-outline-variant/60"
+          disabled
+            ? "opacity-60 cursor-not-allowed border-outline-variant/20 text-on-surface-variant"
+            : isOpen
+            ? "border-primary text-primary"
+            : "border-outline-variant/30 text-on-surface hover:border-outline-variant/60"
         } focus:outline-none focus:border-primary`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-disabled={disabled}
       >
         <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className={`absolute top-full left-0 z-50 mt-1 w-full min-w-max bg-surface border border-outline-variant/20 rounded-2xl shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100 ${dropdownClassName}`}>
           <ul className="max-h-60 overflow-auto py-1 outline-none" role="listbox">
             {options.map((option) => (

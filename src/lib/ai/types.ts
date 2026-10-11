@@ -42,6 +42,7 @@ export interface AIDesignRequest {
   prompt: string;
   dimension?: { width: number; height: number };
   templateId?: string;
+  campaignId?: string;
   assets?: AssetContext[];
   brandContext?: any;
 }

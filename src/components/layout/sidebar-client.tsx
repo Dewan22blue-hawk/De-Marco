@@ -17,7 +17,13 @@ import {
   X,
   ShieldCheck,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Bot,
+  Activity,
+  Calendar,
+  Images,
+  LayoutTemplate,
+  Crown
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -37,12 +43,14 @@ export function SidebarClient({ organizationName, userProfile }: SidebarClientPr
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
     { href: '/dashboard/campaigns', label: 'Campaigns', icon: FolderKanban },
     { href: '/dashboard/contents', label: 'Content Library', icon: Sparkles },
-    { href: '/dashboard/calendar', label: 'Calendar', icon: LayoutDashboard },
-    { href: '/dashboard/assets', label: 'Asset Library', icon: FolderKanban },
-    { href: '/dashboard/templates', label: 'AI Templates', icon: Sparkles },
+    { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
+    { href: '/dashboard/assets', label: 'Asset Library', icon: Images },
+    { href: '/dashboard/templates', label: 'AI Templates', icon: LayoutTemplate },
     { href: '/dashboard/designs', label: 'My Designs', icon: Palette },
-    { href: '/dashboard/brand', label: 'Brand Kit', icon: Palette },
+    { href: '/dashboard/brand', label: 'Brand Kit', icon: Crown },
     { href: '/dashboard/settings/members', label: 'Team Access', icon: Users },
+    { href: '/dashboard/settings/ai', label: 'AI Settings', icon: Bot },
+    { href: '/dashboard/ai/usage', label: 'AI Usage', icon: Activity },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: true },
   ];
 

@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ContentLibraryClient } from "./content-library-client"
 import { listContents } from "./actions"
+import { listCampaigns } from "@/app/dashboard/campaigns/actions"
+import { hasPermission } from "@/lib/auth/authorization"
 
 export const metadata = {
   title: "Content Library | De-Marco Studio",
@@ -34,6 +36,10 @@ export default async function ContentsPage(props: {
     offset
   });
 
+  // Fetch campaigns and check linking permission
+  const { data: campaigns } = await listCampaigns({ limit: 100 });
+  const canLinkCampaigns = await hasPermission("campaigns.update");
+
   return (
     <ContentLibraryClient 
       initialContents={contents || []} 
@@ -44,6 +50,8 @@ export default async function ContentsPage(props: {
       selectedSort={sort}
       selectedView={view}
       limit={limit}
+      campaigns={(campaigns || []).map((c: any) => ({ id: c.id, name: c.name }))}
+      canLinkCampaigns={canLinkCampaigns}
     />
   )
 }

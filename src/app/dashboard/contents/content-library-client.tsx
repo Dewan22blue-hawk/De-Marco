@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useCallback, useTransition, useEffect } from "react"
-import { Search, PlusCircle, LayoutGrid, List, X, Check, FileText } from "lucide-react"
+import { Search, PlusCircle, LayoutGrid, List, X, Check, FileText, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ContentActions } from "./content-actions"
+import { AutoGenerateForm } from "./auto-generate-form"
 import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel, AlertModalAction } from "@/components/ui/alert-modal"
 
 interface Content {
@@ -29,7 +30,9 @@ export function ContentLibraryClient({
   selectedStatus,
   selectedPlatform,
   selectedSort,
-  selectedView
+  selectedView,
+  campaigns = [],
+  canLinkCampaigns = false
 }: { 
   initialContents: Content[]
   totalCount: number
@@ -39,6 +42,8 @@ export function ContentLibraryClient({
   selectedSort: string
   selectedView: string
   limit: number
+  campaigns?: { id: string; name: string }[]
+  canLinkCampaigns?: boolean
 }) {
   const [contents, setContents] = useState<Content[]>(initialContents)
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -158,6 +163,17 @@ export function ContentLibraryClient({
             New Content
           </Link>
         </div>
+      </div>
+
+      <div className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/30 flex flex-col gap-4">
+        <div className="flex items-center gap-2 text-primary">
+          <Sparkles className="w-5 h-5" />
+          <h2 className="font-bold text-on-surface text-lg">AI Content Generator</h2>
+        </div>
+        <p className="text-on-surface-variant text-sm">
+          Stuck on ideas? Let our AI draft your next post, story, or article in seconds.
+        </p>
+        <AutoGenerateForm campaigns={campaigns} canLinkCampaigns={canLinkCampaigns} />
       </div>
 
       {/* Filter bar */}

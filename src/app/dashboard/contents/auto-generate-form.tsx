@@ -1,19 +1,33 @@
 "use client"
 
 import { useState } from "react"
-import { autoGenerateContent, generateContentWithAI } from "./actions"
+import { createContent, generateContentWithAI } from "./actions"
 import { Sparkles, Loader2, ArrowRight, Save } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel } from "@/components/ui/alert-modal"
 import { Button } from "@/components/ui/button"
+import { CustomSelect } from "@/components/ui/custom-select"
 
-export function AutoGenerateForm() {
+export function AutoGenerateForm({
+  campaigns = [],
+  canLinkCampaigns = false,
+}: {
+  campaigns?: { id: string; name: string }[]
+  canLinkCampaigns?: boolean
+}) {
   const [topic, setTopic] = useState("")
   const [contentType, setContentType] = useState("post")
+  const [platform, setPlatform] = useState("instagram")
+  const [campaignId, setCampaignId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [generatedData, setGeneratedData] = useState<any>(null)
   const router = useRouter()
+
+  const campaignOptions = [
+    { value: "", label: "No campaign" },
+    ...(campaigns || []).map((c) => ({ value: c.id, label: c.name })),
+  ]
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,7 +38,8 @@ export function AutoGenerateForm() {
     setGeneratedData(null)
     
     try {
-      const result = await generateContentWithAI(topic, contentType)
+      const activeCampaignId = canLinkCampaigns && campaignId ? campaignId : undefined
+      const result = await generateContentWithAI(topic, contentType, activeCampaignId)
       setGeneratedData(result.generated)
     } catch (error) {
       console.error("Failed to generate content:", error)
@@ -38,8 +53,14 @@ export function AutoGenerateForm() {
     if (!generatedData || generatedData.error) return
     setIsLoading(true)
     try {
-      // Legacy flow or just close modal since generateContentWithAI already saved it
-      await autoGenerateContent(topic, contentType) 
+      await createContent({
+        title: generatedData.title,
+        body: generatedData.body,
+        platform: platform,
+        content_type: generatedData.content_type || contentType,
+        status: "draft",
+        campaign_id: canLinkCampaigns && campaignId ? campaignId : undefined,
+      })
       setTopic("")
       setShowModal(false)
       router.refresh()
@@ -57,6 +78,10 @@ export function AutoGenerateForm() {
     if (generatedData.body) params.set("body", generatedData.body)
     if (generatedData.content_type) params.set("content_type", generatedData.content_type)
     if (generatedData.hashtags) params.set("hashtags", Array.isArray(generatedData.hashtags) ? generatedData.hashtags.join(" ") : generatedData.hashtags)
+    params.set("platform", platform)
+    if (canLinkCampaigns && campaignId) {
+      params.set("campaign_id", campaignId)
+    }
     
     setShowModal(false)
     setTopic("")
@@ -65,36 +90,67 @@ export function AutoGenerateForm() {
 
   return (
     <>
-      <form onSubmit={handleGenerate} className="flex gap-2 w-full max-w-lg">
-      <select
-        value={contentType}
-        onChange={(e) => setContentType(e.target.value)}
-        className="px-4 py-2 bg-surface rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
-        disabled={isLoading}
-      >
-        <option value="post">Social Post</option>
-        <option value="story">Story</option>
-        <option value="reel">Reel</option>
-        <option value="article">Article</option>
-        <option value="announcement">Announcement</option>
-      </select>
-        <input
-        type="text"
-        placeholder="Topic for AI generation (e.g. Summer Sale)"
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-        className="flex-1 px-4 py-2 bg-surface rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
-        disabled={isLoading}
-      />
-      <button
-        type="submit"
-        disabled={isLoading || !topic.trim()}
-        className="clay-button-primary px-4 py-2 rounded-lg font-medium text-white flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
-      >
-        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-        Generate with AI
-      </button>
-    </form>
+      <form onSubmit={handleGenerate} className="flex flex-col gap-3 w-full max-w-3xl">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full">
+          <select
+            value={contentType}
+            onChange={(e) => setContentType(e.target.value)}
+            className="px-4 py-2 bg-surface rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+            disabled={isLoading}
+          >
+            <option value="post">Social Post</option>
+            <option value="story">Story</option>
+            <option value="reel">Reel</option>
+            <option value="article">Article</option>
+            <option value="announcement">Announcement</option>
+          </select>
+          <select
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value)}
+            className="px-4 py-2 bg-surface rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+            disabled={isLoading}
+          >
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="website">Website / Blog</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Topic for AI generation (e.g. Summer Sale)"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            className="flex-1 min-w-[200px] px-4 py-2 bg-surface rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !topic.trim()}
+            className="clay-button-primary px-4 py-2 rounded-lg font-medium text-white flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            Generate with AI
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="w-full sm:w-64">
+            <CustomSelect
+              value={canLinkCampaigns ? campaignId : ""}
+              onChange={setCampaignId}
+              options={campaignOptions}
+              disabled={!canLinkCampaigns}
+              placeholder="No campaign"
+            />
+          </div>
+          {!canLinkCampaigns && (
+            <span className="text-xs text-on-surface-variant/80">
+              Only Campaign Managers can link content to a campaign.
+            </span>
+          )}
+        </div>
+      </form>
 
       <AlertModal open={showModal} onOpenChange={(open) => !isLoading && setShowModal(open)}>
         <AlertModalContent className="max-w-2xl">
