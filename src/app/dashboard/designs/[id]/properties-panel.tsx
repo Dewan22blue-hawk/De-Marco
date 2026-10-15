@@ -17,7 +17,21 @@ import {
   AlignEndHorizontal,
 } from "lucide-react"
 import { AssetPickerModal } from "@/components/dashboard/assets/asset-picker-modal"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { CustomSelect } from "@/components/ui/custom-select"
+import { FontPicker } from "@/components/ui/font-picker"
 import { createClient } from "@/lib/supabase/client"
+
+const BASE_FONT_OPTIONS = ["Inter", "Roboto", "Outfit", "serif"]
+
+const FONT_WEIGHT_OPTIONS = [
+  { value: "normal", label: "Normal" },
+  { value: "500", label: "Medium" },
+  { value: "bold", label: "Bold" },
+  { value: "900", label: "Black" },
+]
 
 const HORIZONTAL_ALIGNMENTS = [
   { value: "left", Icon: AlignLeft, label: "Align left", justify: "flex-start" },
@@ -58,7 +72,7 @@ export function PropertiesPanel({
     )
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
     const val = type === 'number' ? parseFloat(value) : value
     
@@ -75,6 +89,15 @@ export function PropertiesPanel({
   const applyStyle = (updates: Record<string, unknown>) => {
     onUpdate({ style: { ...element.style, ...updates } })
   }
+
+  const fontOptions = Array.from(
+    new Set([
+      ...BASE_FONT_OPTIONS,
+      ...((brandKit?.brand_fonts ?? [])
+        .map((f: any) => f.font_family)
+        .filter(Boolean) as string[]),
+    ])
+  )
 
   const handleAssetSelect = (asset: any) => {
     const supabase = createClient()
@@ -121,19 +144,28 @@ export function PropertiesPanel({
                   <img src={assetMap[element.asset_id].url} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setIsAssetPickerOpen(true)} className="flex-1 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => setIsAssetPickerOpen(true)}>
                     Replace
-                  </button>
-                  <button onClick={() => onUpdate({ asset_id: null })} className="flex-1 py-2 rounded-xl bg-error/10 text-error text-xs font-bold hover:bg-error/20 transition-colors">
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-error hover:bg-error/10 hover:text-error"
+                    onClick={() => onUpdate({ asset_id: null })}
+                  >
                     Remove
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
-              <button onClick={() => setIsAssetPickerOpen(true)} className="w-full py-8 rounded-xl border-2 border-dashed border-outline-variant/30 text-on-surface-variant hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-colors flex flex-col items-center justify-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setIsAssetPickerOpen(true)}
+                className="w-full h-auto py-6 flex-col gap-2 border-2 border-dashed border-outline-variant/30 hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+              >
                 <ImageIcon size={24} className="opacity-50" />
                 <span className="text-xs font-bold">Select Image</span>
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -146,23 +178,23 @@ export function PropertiesPanel({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant ml-1">X Position</label>
-              <input type="number" name="x" value={element.x} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" />
+              <Input type="number" name="x" value={element.x} onChange={handleChange} />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant ml-1">Y Position</label>
-              <input type="number" name="y" value={element.y} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" />
+              <Input type="number" name="y" value={element.y} onChange={handleChange} />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant ml-1">Width</label>
-              <input type="number" name="width" value={element.width} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" />
+              <Input type="number" name="width" value={element.width} onChange={handleChange} />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-on-surface-variant ml-1">Height</label>
-              <input type="number" name="height" value={element.height} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" />
+              <Input type="number" name="height" value={element.height} onChange={handleChange} />
             </div>
             <div className="space-y-1 col-span-2">
               <label className="text-[10px] font-bold text-on-surface-variant ml-1">Rotation (°)</label>
-              <input type="number" name="rotation" value={element.rotation} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" />
+              <Input type="number" name="rotation" value={element.rotation} onChange={handleChange} />
             </div>
           </div>
         </div>
@@ -174,12 +206,12 @@ export function PropertiesPanel({
               <Type size={12} /> Content
             </div>
             <div className="space-y-1">
-              <textarea 
-                name="text" 
-                value={element.content?.text || ''} 
+              <Textarea
+                name="text"
+                value={element.content?.text || ''}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none resize-none"
+                className="resize-none"
               />
             </div>
           </div>
@@ -198,17 +230,19 @@ export function PropertiesPanel({
                 {HORIZONTAL_ALIGNMENTS.map(({ value, Icon, label, justify }) => {
                   const active = (element.style?.textAlign || 'left') === value
                   return (
-                    <button
+                    <Button
                       key={value}
                       type="button"
-                      onClick={() => applyStyle({ textAlign: value, justifyContent: justify })}
+                      variant="ghost"
+                      size="sm"
+                      aria-pressed={active}
                       title={label}
                       aria-label={label}
-                      aria-pressed={active}
-                      className={`flex-1 py-1.5 rounded-lg flex items-center justify-center transition-colors ${active ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'}`}
+                      onClick={() => applyStyle({ textAlign: value, justifyContent: justify })}
+                      className={`flex-1 h-8 rounded-lg px-0 ${active ? 'bg-primary text-white shadow-sm hover:bg-primary hover:text-white' : 'text-on-surface-variant'}`}
                     >
                       <Icon size={14} />
-                    </button>
+                    </Button>
                   )
                 })}
               </div>
@@ -220,17 +254,19 @@ export function PropertiesPanel({
                 {VERTICAL_ALIGNMENTS.map(({ value, Icon, label }) => {
                   const active = (element.style?.alignItems || 'flex-start') === value
                   return (
-                    <button
+                    <Button
                       key={value}
                       type="button"
-                      onClick={() => applyStyle({ alignItems: value })}
+                      variant="ghost"
+                      size="sm"
+                      aria-pressed={active}
                       title={label}
                       aria-label={label}
-                      aria-pressed={active}
-                      className={`flex-1 py-1.5 rounded-lg flex items-center justify-center transition-colors ${active ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'}`}
+                      onClick={() => applyStyle({ alignItems: value })}
+                      className={`flex-1 h-8 rounded-lg px-0 ${active ? 'bg-primary text-white shadow-sm hover:bg-primary hover:text-white' : 'text-on-surface-variant'}`}
                     >
                       <Icon size={14} />
-                    </button>
+                    </Button>
                   )
                 })}
               </div>
@@ -256,10 +292,12 @@ export function PropertiesPanel({
                   {brandKit.brand_colors.map((c: any, i: number) => (
                     <button
                       key={i}
+                      type="button"
                       onClick={() => handleBrandColorSelect(c.color_hex)}
                       className="w-6 h-6 rounded-full border border-outline-variant/20 hover:scale-110 transition-transform shadow-sm"
                       style={{ backgroundColor: c.color_hex }}
                       title={c.name}
+                      aria-label={c.name}
                     />
                   ))}
                 </div>
@@ -270,47 +308,52 @@ export function PropertiesPanel({
               <>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-on-surface-variant ml-1">Font Family</label>
-                  <select 
-                    name="style.fontFamily" 
-                    value={element.style?.fontFamily || 'Inter'} 
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none"
-                  >
-                    <option value="Inter">Inter</option>
-                    <option value="Roboto">Roboto</option>
-                    <option value="Outfit">Outfit</option>
-                    <option value="serif">Serif</option>
-                    {brandKit?.brand_fonts?.map((f: any, i: number) => (
-                      <option key={`bf-${i}`} value={f.font_family}>{f.font_family} (Brand {f.font_role})</option>
-                    ))}
-                  </select>
+                  <FontPicker
+                    value={element.style?.fontFamily || 'Inter'}
+                    onChange={(val) => applyStyle({ fontFamily: val })}
+                    options={fontOptions}
+                    placeholder="Inter"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-on-surface-variant ml-1">Font Size</label>
-                  <input type="text" name="style.fontSize" value={element.style?.fontSize || '16px'} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="e.g. 16px, 2rem" />
+                  <Input
+                    type="text"
+                    name="style.fontSize"
+                    value={element.style?.fontSize || '16px'}
+                    onChange={handleChange}
+                    placeholder="e.g. 16px, 2rem"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-on-surface-variant ml-1">Font Weight</label>
-                  <select 
-                    name="style.fontWeight" 
-                    value={element.style?.fontWeight || 'normal'} 
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none"
-                  >
-                    <option value="normal">Normal</option>
-                    <option value="500">Medium</option>
-                    <option value="bold">Bold</option>
-                    <option value="900">Black</option>
-                  </select>
+                  <CustomSelect
+                    name="style.fontWeight"
+                    value={element.style?.fontWeight || 'normal'}
+                    onChange={(val) => applyStyle({ fontWeight: val })}
+                    options={FONT_WEIGHT_OPTIONS}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-on-surface-variant ml-1">Line Height</label>
-                    <input type="text" name="style.lineHeight" value={element.style?.lineHeight || ''} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="1.4" />
+                    <Input
+                      type="text"
+                      name="style.lineHeight"
+                      value={element.style?.lineHeight || ''}
+                      onChange={handleChange}
+                      placeholder="1.4"
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-on-surface-variant ml-1">Letter Spacing</label>
-                    <input type="text" name="style.letterSpacing" value={element.style?.letterSpacing || ''} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="0px" />
+                    <Input
+                      type="text"
+                      name="style.letterSpacing"
+                      value={element.style?.letterSpacing || ''}
+                      onChange={handleChange}
+                      placeholder="0px"
+                    />
                   </div>
                 </div>
               </>
@@ -320,13 +363,32 @@ export function PropertiesPanel({
               <>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-on-surface-variant ml-1">Border Radius</label>
-                  <input type="text" name="style.borderRadius" value={element.style?.borderRadius || '0px'} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="e.g. 8px, 50%" />
+                  <Input
+                    type="text"
+                    name="style.borderRadius"
+                    value={element.style?.borderRadius || '0px'}
+                    onChange={handleChange}
+                    placeholder="e.g. 8px, 50%"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-on-surface-variant ml-1">Fill Color</label>
                   <div className="flex gap-2">
-                    <input type="color" name="style.backgroundColor" value={element.style?.backgroundColor || '#cccccc'} onChange={handleChange} className="w-10 h-10 rounded-lg overflow-hidden border-none cursor-pointer" />
-                    <input type="text" name="style.backgroundColor" value={element.style?.backgroundColor || '#cccccc'} onChange={handleChange} className="flex-1 px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs uppercase" />
+                    <input
+                      type="color"
+                      name="style.backgroundColor"
+                      value={element.style?.backgroundColor || '#cccccc'}
+                      onChange={handleChange}
+                      className="h-12 w-12 shrink-0 rounded-xl border border-outline-variant/30 overflow-hidden cursor-pointer bg-transparent"
+                      aria-label="Fill color"
+                    />
+                    <Input
+                      type="text"
+                      name="style.backgroundColor"
+                      value={element.style?.backgroundColor || '#cccccc'}
+                      onChange={handleChange}
+                      className="flex-1 uppercase"
+                    />
                   </div>
                 </div>
               </>
@@ -335,8 +397,21 @@ export function PropertiesPanel({
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-on-surface-variant ml-1">Text Color</label>
                 <div className="flex gap-2">
-                  <input type="color" name="style.color" value={element.style?.color || '#000000'} onChange={handleChange} className="w-10 h-10 rounded-lg overflow-hidden border-none cursor-pointer" />
-                  <input type="text" name="style.color" value={element.style?.color || '#000000'} onChange={handleChange} className="flex-1 px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs uppercase" />
+                  <input
+                    type="color"
+                    name="style.color"
+                    value={element.style?.color || '#000000'}
+                    onChange={handleChange}
+                    className="h-12 w-12 shrink-0 rounded-xl border border-outline-variant/30 overflow-hidden cursor-pointer bg-transparent"
+                    aria-label="Text color"
+                  />
+                  <Input
+                    type="text"
+                    name="style.color"
+                    value={element.style?.color || '#000000'}
+                    onChange={handleChange}
+                    className="flex-1 uppercase"
+                  />
                 </div>
               </div>
             )}
@@ -344,12 +419,13 @@ export function PropertiesPanel({
         </div>
 
         <div className="pt-6 border-t border-outline-variant/20">
-          <button 
+          <Button
+            variant="ghost"
             onClick={onDelete}
-            className="w-full py-2.5 rounded-xl border border-error/30 text-error hover:bg-error/10 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+            className="w-full text-error hover:bg-error/10 hover:text-error font-bold"
           >
-            <Trash2 size={14} /> Delete Element
-          </button>
+            <Trash2 size={14} className="mr-2" /> Delete Element
+          </Button>
         </div>
       </div>
 
