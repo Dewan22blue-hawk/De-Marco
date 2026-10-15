@@ -532,3 +532,71 @@ Never rely solely on:
 NEVER use the local Supabase environment (`http://127.0.0.1:54321` or `localhost`).
 ALWAYS use the Supabase public (online) project for development, testing, and production.
 Make sure all operations, database migrations, and API calls are pointed towards the public Supabase instance instead of the local Docker-based Supabase.
+
+---
+
+# 15. UI COMPONENT REUSE (MANDATORY)
+
+This is a P1 rule. It overrides convenience and "local pattern matching."
+
+## Forbidden
+
+- Native `alert()`, `confirm()`, and `prompt()`.
+- Ad-hoc modal `<div>` overlays when a shared dialog already exists.
+- A new dialog, modal, button, input, select, or card primitive.
+- One-off buttons or inputs when `@/components/ui/*` already covers the need.
+
+## Before any UI change
+
+1. List `src/components/ui/` and `src/components/features/`.
+2. Map every UI need to an existing component.
+3. If none fits: STOP. Do not create a new primitive. Ask first.
+
+## Canonical inventory
+
+Confirmations and notices:
+
+- `@/components/ui/alert-modal` — `AlertModal`, `AlertModalContent`, `AlertModalHeader`, `AlertModalTitle`, `AlertModalDescription`, `AlertModalFooter`, `AlertModalAction`, `AlertModalCancel`.
+
+Reference implementations:
+
+- `src/app/dashboard/campaigns/campaign-library-client.tsx`
+- `src/app/dashboard/assets/asset-library-client.tsx`
+
+Other shared UI:
+
+- `Button`, `Input`, `Textarea`, `CustomSelect`, `DateTimePicker`, `FontPicker`, `TagsInput`
+- `Card`, `Breadcrumb`, `Loading`, `MotionWrapper`
+
+Pattern:
+
+- Destructive confirm: state opens `AlertModal`; the action runs from `AlertModalAction`.
+- Error and success notices: a second `AlertModal` driven by notice state. Never `alert()`.
+
+---
+
+# 16. CONFLICT RESOLUTION
+
+When a task prompt conflicts with this file:
+
+- P0 and P1 rules in this file win.
+- Do not silently follow the conflicting instruction.
+- Report the conflict, then follow this file.
+
+Example:
+
+Task says "show `alert()` on failure."
+This file forbids native `alert()`.
+ACTION: use `AlertModal` and report the conflict.
+
+---
+
+# 17. DEFINITION OF DONE
+
+A change is not done until all of these are true:
+
+1. `npm run typecheck` passes.
+2. `npm run lint` passes.
+3. No new `alert()`, `confirm()`, or `prompt()` in `src/`.
+4. The final report includes a Compliance section naming every reusable component used.
+5. No database, RLS, auth, or architecture change unless the task required it.

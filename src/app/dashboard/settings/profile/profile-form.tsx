@@ -6,10 +6,12 @@ import { updateProfile } from "./actions"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalAction } from "@/components/ui/alert-modal"
 
 export function ProfileForm({ initialData, email }: { initialData: { [key: string]: string | null | undefined }, email: string }) {
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
+  const [showAvatarNotice, setShowAvatarNotice] = useState(false)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -52,7 +54,7 @@ export function ProfileForm({ initialData, email }: { initialData: { [key: strin
             type="button" 
             variant="outline"
             size="sm"
-            onClick={() => alert("Avatar upload will be integrated with the Asset Manager in the next phase.")}
+            onClick={() => setShowAvatarNotice(true)}
           >
             Change Avatar
           </Button>
@@ -146,6 +148,20 @@ export function ProfileForm({ initialData, email }: { initialData: { [key: strin
           {isPending ? "Saving..." : "Save Profile"}
         </Button>
       </div>
+
+      <AlertModal open={showAvatarNotice} onOpenChange={setShowAvatarNotice}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>Avatar Upload</AlertModalTitle>
+            <AlertModalDescription>
+              Avatar upload will be integrated with the Asset Manager in the next phase.
+            </AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalAction onClick={() => setShowAvatarNotice(false)}>OK</AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
     </form>
   )
 }

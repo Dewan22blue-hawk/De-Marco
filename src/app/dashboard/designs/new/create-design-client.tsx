@@ -1,14 +1,15 @@
 "use client"
 
-import React, { useState, useTransition } from "react"
+import React, { useState, useTransition, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { LayoutTemplate, ImagePlus, CheckCircle2, ChevronRight, Wand2, Sparkles, Send } from "lucide-react"
+import { LayoutTemplate, ImagePlus, CheckCircle2, ChevronRight, Wand2, Sparkles, Send, FileText } from "lucide-react"
 import { AssetPickerModal } from "@/components/dashboard/assets/asset-picker-modal"
 import { createDesignFromTemplate, magicFillDesignVariables, generateAIDesignDraft, createDesignFromAIDraft } from "../actions"
 import { saveAssetMetadata } from "@/app/dashboard/assets/actions"
 import { InteractiveStage, scaleFor } from "./interactive-stage"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { buildDesignPromptFromContent, dimensionForContent, readDesignBrief, clearDesignBrief, type ContentBrief } from "@/lib/design/content-brief"
 
 export function CreateDesignClient({ 
   templates, 
@@ -47,6 +48,27 @@ export function CreateDesignClient({
   const [aiPrompt, setAiPrompt] = useState("")
   const [aiOutput, setAiOutput] = useState<any | null>(null)
   const [aiAssetMap, setAiAssetMap] = useState<Record<string, { url: string }>>({})
+
+  // Content Library hand-off
+  const [contentBrief, setContentBrief] = useState<ContentBrief | null>(null)
+  const briefApplied = useRef(false)
+
+  useEffect(() => {
+    if (briefApplied.current) return
+    briefApplied.current = true
+
+    const brief = readDesignBrief()
+    if (!brief) return
+    clearDesignBrief()
+
+    setContentBrief(brief)
+    setMode('ai')
+    setStep(2)
+    setAiPrompt(buildDesignPromptFromContent(brief))
+    setAiDimension(dimensionForContent(brief))
+    if (brief.title?.trim()) setDesignName(brief.title.trim())
+    if (brief.campaign_id && canLinkCampaigns) setCampaignId(brief.campaign_id)
+  }, [canLinkCampaigns])
 
   const campaignOptions = [
     { value: "", label: "No campaign" },
@@ -185,7 +207,13 @@ export function CreateDesignClient({
         const { toPng } = await import('html-to-image')
         const stageEl = document.getElementById('ai-design-stage')
         if (!stageEl) throw new Error("Stage element not found")
-        
+
+        // Ensure webfonts and images are settled before capturing
+        if (document.fonts?.ready) {
+          await document.fonts.ready
+        }
+        await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 50)))
+
         const maxDim = Math.max(aiOutput.width, aiOutput.height)
         const dynamicRatio = maxDim > 1500 ? 1.5 : 2
 
@@ -193,6 +221,7 @@ export function CreateDesignClient({
           width: aiOutput.width, 
           height: aiOutput.height, 
           pixelRatio: dynamicRatio,
+          cacheBust: true,
           style: {
             transform: 'none',
             transformOrigin: 'top left'
@@ -495,6 +524,18 @@ export function CreateDesignClient({
                 AI Creative Studio
              </h2>
           </div>
+
+          {contentBrief && (
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-primary/10 border border-primary/20 text-on-surface">
+              <FileText className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-bold text-primary">Loaded from Content Library</p>
+                <p className="text-on-surface-variant">
+                  The brief below was generated from {contentBrief.title ? `“${contentBrief.title}”` : "your saved content"}. Review it, then generate the layout.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
              <div className="lg:col-span-5 flex flex-col gap-6">

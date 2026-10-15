@@ -4,11 +4,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Edit2, Copy, Loader2, Archive } from "lucide-react"
+import { ArrowLeft, Edit2, Copy, Loader2, Archive, Trash2 } from "lucide-react"
 import type { TemplateWithRelations } from "@/schemas/template"
-import { cloneTemplate, archiveTemplate } from "../actions"
-
-
+import { cloneTemplate, archiveTemplate, deleteTemplate } from "../actions"
+import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel, AlertModalAction } from "@/components/ui/alert-modal"
 
 interface Props {
   template: TemplateWithRelations
@@ -18,6 +17,8 @@ export function TemplateDetailClient({ template }: Props) {
   const router = useRouter()
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
 
   const handleDuplicate = async () => {
@@ -63,6 +64,27 @@ export function TemplateDetailClient({ template }: Props) {
       setMessage({ type: "error", text: errorMessage })
     } finally {
       setIsArchiving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!template.id) {
+      setMessage({ type: "error", text: "Template tidak valid." })
+      return
+    }
+
+    setIsDeleting(true)
+    setMessage(null)
+
+    try {
+      const res = await deleteTemplate(template.id)
+      if (res.success) {
+        router.push("/dashboard/templates")
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Gagal menghapus template."
+      setMessage({ type: "error", text: errorMessage })
+      setIsDeleting(false)
     }
   }
 
@@ -153,42 +175,83 @@ export function TemplateDetailClient({ template }: Props) {
             </div>
 
             <div className="mt-6 pt-4 border-t border-outline-variant/20 space-y-3">
+              <Link
+                href={`/dashboard/templates/${template.id}/edit`}
+                className="w-full clay-button-primary py-3 rounded-xl text-white font-headline-sm text-body-md font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity"
+              >
+                <Edit2 size={18} />
+                <span>Edit Template</span>
+              </Link>
               <button
                 onClick={handleDuplicate}
-                disabled={isDuplicating}
-                className="w-full clay-button-primary py-3 rounded-xl text-white font-headline-sm text-body-md font-semibold flex items-center justify-center gap-2 disabled:opacity-70"
+                disabled={isDuplicating || isDeleting}
+                className="w-full border border-outline-variant/30 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2 disabled:opacity-70 font-semibold text-body-md"
               >
                 {isDuplicating ? (
                   <>
-                    <Loader2 className="animate-spin" />
-                    Duplicating...
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Duplicating...</span>
                   </>
                 ) : (
                   <>
                     <Copy size={18} />
-                    Duplicate Template
+                    <span>Duplicate Template</span>
                   </>
                 )}
               </button>
               <button
                 onClick={handleArchive}
-                disabled={isArchiving}
-                className="w-full border border-outline-variant/30 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                disabled={isArchiving || isDeleting}
+                className="w-full border border-outline-variant/30 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2 disabled:opacity-70 font-semibold text-body-md"
               >
                 <Archive size={18} />
-                {isArchiving ? "Archiving..." : "Archive Template"}
+                <span>{isArchiving ? "Archiving..." : "Archive Template"}</span>
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting || isDuplicating}
+                className="w-full border border-error/30 text-error hover:bg-error/10 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-70 font-semibold text-body-md"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={18} />
+                    <span>Delete Template</span>
+                  </>
+                )}
               </button>
               <Link
                 href="/dashboard/templates"
                 className="w-full px-4 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high font-headline-sm text-body-md font-semibold text-on-surface border border-outline-variant/40 flex items-center justify-center gap-2"
               >
-                <Edit2 size={18} />
+                <ArrowLeft size={18} />
                 <span>Back to Library</span>
               </Link>
             </div>
           </div>
         </div>
       </div>
+
+      <AlertModal open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>Delete template</AlertModalTitle>
+            <AlertModalDescription>
+              Are you sure you want to delete this template? This action cannot be undone.
+            </AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalCancel>Cancel</AlertModalCancel>
+            <AlertModalAction className="bg-red-600 hover:bg-red-700" onClick={handleDelete}>
+              Delete
+            </AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
     </div>
   )
 }

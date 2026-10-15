@@ -117,6 +117,7 @@ export async function createDesignFromTemplate(payload: { templateId: string; na
       height: template.height,
       unit: template.unit,
       status: "draft",
+      preview_asset_id: template.thumbnail_asset_id || null,
       created_by: user.id
     })
     .select()
@@ -204,7 +205,9 @@ export async function archiveDesign(designId: string) {
     .select("organization_id")
     .single()
 
-  if (error) throw error
+  if (error || !design) {
+    throw new Error(error?.message || "Design not found or archive blocked")
+  }
 
   await createAuditLog({
     organization_id: design.organization_id,
@@ -230,7 +233,9 @@ export async function deleteDesign(designId: string) {
     .select("organization_id")
     .single()
 
-  if (error) throw error
+  if (error || !design) {
+    throw new Error(error?.message || "Design not found or delete blocked")
+  }
 
   await createAuditLog({
     organization_id: design.organization_id,
@@ -266,6 +271,7 @@ export async function duplicateDesign(designId: string) {
       height: sourceDesign.height,
       unit: sourceDesign.unit,
       status: "draft",
+      preview_asset_id: sourceDesign.preview_asset_id,
       created_by: user.id
     })
     .select()

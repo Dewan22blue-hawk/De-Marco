@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useTransition, useEffect } from "react"
-import { Search, PlusCircle, LayoutGrid, List, X, Check, FileText, Sparkles } from "lucide-react"
+import { Search, PlusCircle, LayoutGrid, List, X, Check, FileText, Sparkles, Palette } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { CustomSelect } from "@/components/ui/custom-select"
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { ContentActions } from "./content-actions"
 import { AutoGenerateForm } from "./auto-generate-form"
 import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel, AlertModalAction } from "@/components/ui/alert-modal"
+import { listContents, bulkDeleteContents } from "./actions"
+import { storeDesignBrief } from "@/lib/design/content-brief"
 
 interface Content {
   id: string
@@ -31,6 +33,7 @@ export function ContentLibraryClient({
   selectedPlatform,
   selectedSort,
   selectedView,
+  limit,
   campaigns = [],
   canLinkCampaigns = false
 }: { 
@@ -46,8 +49,6 @@ export function ContentLibraryClient({
   canLinkCampaigns?: boolean
 }) {
   const [contents, setContents] = useState<Content[]>(initialContents)
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setContents(initialContents) }, [initialContents])
 
   const [searchQuery, setSearchQuery] = useState(search)
   const [statusFilter, setStatusFilter] = useState(selectedStatus)
@@ -81,14 +82,15 @@ export function ContentLibraryClient({
     })
   }, [pathname, router])
 
+  // Debounced filter change - only update URL after user stops typing/changing
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchQuery !== search) {
+      if (searchQuery !== search || statusFilter !== selectedStatus || platformFilter !== selectedPlatform || sortBy !== selectedSort || viewMode !== selectedView) {
         updateUrl({ q: searchQuery, status: statusFilter, platform: platformFilter, sort: sortBy, view: viewMode })
       }
     }, 400)
     return () => clearTimeout(timer)
-  }, [searchQuery, search, statusFilter, platformFilter, sortBy, viewMode, updateUrl])
+  }, [searchQuery, search, statusFilter, selectedStatus, platformFilter, selectedPlatform, sortBy, selectedSort, viewMode, selectedView, updateUrl])
 
   const handleFilterChange = (updates: Record<string, string | undefined>) => {
     const nextQ = updates.q !== undefined ? updates.q : searchQuery
@@ -108,9 +110,25 @@ export function ContentLibraryClient({
 
   const handleLoadMore = async () => {
     setIsLoadingMore(true)
-    // Placeholder for actual pagination logic calling listContents action with offset
-    console.log("Load more clicked")
-    setIsLoadingMore(false)
+    try {
+      const offset = contents.length
+      const { data: moreContents } = await listContents({
+        search: searchQuery,
+        status: statusFilter || undefined,
+        platform: platformFilter || undefined,
+        sort: sortBy,
+        limit,
+        offset
+      })
+      if (moreContents && moreContents.length > 0) {
+        setContents(prev => [...prev, ...moreContents])
+      }
+    } catch (error) {
+      console.error("Failed to load more contents:", error)
+      setErrorMsg("Failed to load more contents")
+    } finally {
+      setIsLoadingMore(false)
+    }
   }
 
   const toggleSelection = (id: string, e: React.MouseEvent) => {
@@ -129,15 +147,30 @@ export function ContentLibraryClient({
 
   const confirmBulkDelete = async () => {
     if (selectedIds.size === 0) return
+    setIsLoadingMore(true)
     try {
-      // Implement bulkDeleteContents action
-      console.log("Bulk delete contents", Array.from(selectedIds))
+      await bulkDeleteContents(Array.from(selectedIds))
       setContents(prev => prev.filter(c => !selectedIds.has(c.id)))
       setSelectedIds(new Set())
       setBulkAction(null)
-    } catch {
-      setErrorMsg("Failed to delete contents")
+    } catch (error: any) {
+      setErrorMsg(error?.message || "Failed to delete contents")
+    } finally {
+      setIsLoadingMore(false)
     }
+  }
+
+  const handleCreateDesign = (content: Content, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    storeDesignBrief({
+      title: content.title,
+      body: content.body,
+      content_type: content.content_type,
+      platform: content.platform,
+      content_id: content.id,
+    })
+    router.push("/dashboard/designs/new")
   }
 
   return (
@@ -353,6 +386,16 @@ export function ContentLibraryClient({
                         </div>
                       </div>
                       <div onClick={(e) => e.stopPropagation()} className="shrink-0 flex items-center gap-2">
+                        <Button
+                          onClick={(e) => handleCreateDesign(content, e)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1.5"
+                          title="Create a design from this content"
+                        >
+                          <Palette className="w-3.5 h-3.5" />
+                          Create Design
+                        </Button>
                         <ContentActions contentId={content.id} status={content.status || "draft"} defaultPlatform={content.platform || "instagram"} />
                       </div>
                     </div>
@@ -402,7 +445,16 @@ export function ContentLibraryClient({
                       <FileText className="w-3 h-3 shrink-0" />
                       <span className="capitalize truncate">{content.content_type} • {content.platform || "Generic"}</span>
                     </div>
-                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0 flex items-center gap-2">
+                      <Button
+                        onClick={(e) => handleCreateDesign(content, e)}
+                        variant="outline"
+                        size="sm"
+                        title="Create a design from this content"
+                        aria-label="Create a design from this content"
+                      >
+                        <Palette className="w-3.5 h-3.5" />
+                      </Button>
                       <ContentActions contentId={content.id} status={content.status || "draft"} defaultPlatform={content.platform || "instagram"} />
                     </div>
                   </div>
@@ -414,7 +466,7 @@ export function ContentLibraryClient({
             <div className="flex justify-center mt-8 pb-8">
               <Button 
                 onClick={handleLoadMore} 
-                disabled={isLoadingMore}
+                disabled={isLoadingMore || isSearching}
                 variant="outline"
                 isLoading={isLoadingMore}
               >

@@ -32,6 +32,9 @@ export default async function ContentsPage(props: {
   // Fetch contents
   const { data: contents, count } = await listContents({
     search: query,
+    status: statusFilter || undefined,
+    platform: platformFilter || undefined,
+    sort,
     limit,
     offset
   });
@@ -42,6 +45,7 @@ export default async function ContentsPage(props: {
 
   return (
     <ContentLibraryClient 
+      key={`${query}-${statusFilter}-${platformFilter}-${sort}-${view}`}
       initialContents={contents || []} 
       totalCount={count || 0}
       search={query}

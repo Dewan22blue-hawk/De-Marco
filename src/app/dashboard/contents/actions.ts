@@ -4,10 +4,9 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { createAuditLog } from "@/lib/audit"
 import { runAITask } from "@/lib/ai/service"
-import { z } from "zod"
 import { GeneratedContentSchema } from "@/schemas/ai-content"
 
-export async function listContents(opts?: { search?: string; status?: string; limit?: number; offset?: number }) {
+export async function listContents(opts?: { search?: string; status?: string; platform?: string; sort?: string; limit?: number; offset?: number }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Unauthorized")
@@ -23,11 +22,19 @@ export async function listContents(opts?: { search?: string; status?: string; li
 
   if (opts?.search) query = query.ilike("title", `%${opts.search}%`)
   if (opts?.status && opts.status !== "all") query = query.eq("status", opts.status)
+  if (opts?.platform && opts.platform !== "all") query = query.eq("platform", opts.platform)
 
   const limit = opts?.limit || 24
   const offset = opts?.offset || 0
 
-  query = query.order("created_at", { ascending: false }).range(offset, offset + limit - 1)
+  const sortBy = opts?.sort || "newest"
+  let orderColumn = "created_at"
+  let ascending = false
+  if (sortBy === "title-asc") { orderColumn = "title"; ascending = true; }
+  else if (sortBy === "title-desc") { orderColumn = "title"; ascending = false; }
+  else { orderColumn = "created_at"; ascending = false; }
+
+  query = query.order(orderColumn, { ascending }).range(offset, offset + limit - 1)
 
   const { data, count, error } = await query
   if (error) {
@@ -141,6 +148,13 @@ export async function generateContentWithAI(
     .limit(1)
     .maybeSingle()
 
+  // Check if AI is configured
+  const { getOrgApiKey } = await import("@/lib/ai/key-vault")
+  const apiKey = await getOrgApiKey(organizationId, 'gemini')
+  if (!apiKey) {
+    throw new Error("AI_NOT_CONFIGURED: Please configure your Gemini API key in Settings > AI Configuration")
+  }
+
   let campaign = null
   if (campaignId) {
     const { data: campaignData } = await supabase
@@ -153,7 +167,24 @@ export async function generateContentWithAI(
     campaign = campaignData
   }
 
-  let prompt = `Generate a ${contentType} about: ${topic}`;
+  let prompt = `Generate a ${contentType} about: ${topic}
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "title": "string (3-100 chars)",
+  "body": "string (min 10 chars)",
+  "hashtags": ["string", "string"],
+  "cta": "string (optional)",
+  "tone": "string (optional, default: Professional)",
+  "content_type": "post|story|reel|article|announcement (default: post)"
+}
+
+Rules:
+- No markdown formatting
+- No backticks
+- No conversational text
+- Only the JSON object`;
+
   if (campaign) {
     const campaignDetails: string[] = []
     if (campaign.name) campaignDetails.push(`Campaign Name: ${campaign.name}`)
@@ -166,15 +197,34 @@ export async function generateContentWithAI(
     }
   }
 
-  const generated = await runAITask({
-    organization_id: organizationId,
-    task_type: "content_generation",
-    context: { brand: brandKit, campaign: campaign || undefined } as any,
-    prompt,
-    schema: GeneratedContentSchema
-  });
+  try {
+    const generated = await runAITask({
+      organization_id: organizationId,
+      task_type: "content_generation",
+      context: { brand: brandKit, campaign: campaign || undefined } as any,
+      prompt,
+      schema: GeneratedContentSchema
+    });
 
-  return { generated };
+    return { generated };
+  } catch (error: any) {
+    // Provide more specific error messages
+    const errMsg = String(error?.message || error || "").toLowerCase()
+    
+    if (errMsg.includes("ai_not_configured") || errMsg.includes("ai provider configuration missing")) {
+      throw new Error("AI_NOT_CONFIGURED: Please configure your Gemini API key in Settings > AI Configuration")
+    }
+    if (errMsg.includes("invalid ai output format") || errMsg.includes("json")) {
+      throw new Error("AI_RESPONSE_INVALID: The AI returned an invalid response. Please try again.")
+    }
+    if (errMsg.includes("api key") || errMsg.includes("authentication") || errMsg.includes("permission")) {
+      throw new Error("AI_AUTH_ERROR: Invalid or expired API key. Please update your Gemini API key in Settings.")
+    }
+    if (errMsg.includes("quota") || errMsg.includes("rate limit") || errMsg.includes("resource_exhausted") || errMsg.includes("high demand") || errMsg.includes("429") || errMsg.includes("model is currently experiencing")) {
+      throw new Error("AI_RATE_LIMITED: AI quota exceeded. Please wait a moment and try again.")
+    }
+    throw new Error(`AI_GENERATION_FAILED: ${error?.message || "Unknown error occurred"}`)
+  }
 }
 
 export async function submitForReview(contentId: string) {
@@ -271,7 +321,9 @@ export async function deleteContent(contentId: string) {
     .select("organization_id")
     .single()
 
-  if (error) throw error
+  if (error || !content) {
+    throw new Error(error?.message || "Content not found or delete blocked")
+  }
 
   await createAuditLog({
     organization_id: content.organization_id,
@@ -280,6 +332,57 @@ export async function deleteContent(contentId: string) {
     action: "delete",
     new_data: { deleted_at: new Date().toISOString() }
   })
+
+  revalidatePath("/dashboard/contents")
+  return { success: true }
+}
+
+export async function bulkDeleteContents(contentIds: string[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { hasPermission } = await import("@/lib/auth/authorization")
+  const isAllowed = await hasPermission("contents.delete")
+  if (!isAllowed) throw new Error("Forbidden")
+
+  const { data: profile } = await supabase.from("profiles").select("default_organization_id").eq("id", user.id).single()
+  if (!profile?.default_organization_id) throw new Error("No organization assigned")
+  const organizationId = profile.default_organization_id
+
+  // Verify all contents belong to the organization
+  const { data: contents, error: fetchError } = await supabase
+    .from("contents")
+    .select("id")
+    .in("id", contentIds)
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null)
+
+  if (fetchError) throw fetchError
+  if (!contents || contents.length !== contentIds.length) {
+    throw new Error("Some contents not found or access denied")
+  }
+
+  const { error } = await supabase
+    .from("contents")
+    .update({ 
+      deleted_at: new Date().toISOString(),
+      updated_by: user.id
+    })
+    .in("id", contentIds)
+    .eq("organization_id", organizationId)
+
+  if (error) throw error
+
+  for (const contentId of contentIds) {
+    await createAuditLog({
+      organization_id: organizationId,
+      table_name: "contents",
+      record_id: contentId,
+      action: "delete",
+      new_data: { deleted_at: new Date().toISOString() }
+    })
+  }
 
   revalidatePath("/dashboard/contents")
   return { success: true }

@@ -162,13 +162,15 @@ export function CanvasEditor({
         }}
       >
         {elements
+          .slice()
           .sort((a, b) => a.z_index - b.z_index)
           .map((el) => (
             <div
               key={el.id}
               onMouseDown={(e) => handleMouseDown(e, el)}
+              onClick={(e) => e.stopPropagation()}
               className={`absolute group transition-shadow ${
-                selectedId === el.id ? "ring-2 ring-primary ring-offset-2 z-[9999]" : "hover:ring-1 hover:ring-primary/50"
+                selectedId === el.id ? "ring-2 ring-primary ring-offset-2" : "hover:ring-1 hover:ring-primary/50"
               } ${el.locked ? "cursor-not-allowed" : "cursor-grab"} ${!el.visible ? "hidden" : ""}`}
               style={{
                 left: el.x,

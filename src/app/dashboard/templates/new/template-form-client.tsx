@@ -1,14 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { Input } from "@/components/ui/input"
 import { createTemplateFromForm, updateTemplateFromForm } from "../actions"
 import { AssetPickerModal, type Asset } from "@/components/dashboard/assets/asset-picker-modal"
 import { createClient } from "@/lib/supabase/client"
-import { ImagePlus, X } from "lucide-react"
+import { ImagePlus, X, Loader2, AlertCircle } from "lucide-react"
 
 export function TemplateFormClient({ 
   categories, 
@@ -21,6 +21,8 @@ export function TemplateFormClient({
   const [categoryId, setCategoryId] = useState(initialData?.category_id || "")
   const [formatCode, setFormatCode] = useState(initialData?.format_code || "instagram_post")
   const [unit, setUnit] = useState(initialData?.unit || "px")
+  const [isPending, startTransition] = useTransition()
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   // Asset states
   const [thumbnailAsset, setThumbnailAsset] = useState<Asset | null>(
@@ -29,7 +31,12 @@ export function TemplateFormClient({
       name: "Thumbnail",
       storage_path: initialData.thumbnail.storage_path,
       storage_bucket: initialData.thumbnail.storage_bucket,
-    } as Asset : null
+    } as Asset : (initialData?.thumbnail_asset_id ? {
+      id: initialData.thumbnail_asset_id,
+      name: "Thumbnail",
+      storage_path: "",
+      storage_bucket: "assets",
+    } as Asset : null)
   )
   const [backgroundAsset, setBackgroundAsset] = useState<Asset | null>(
     initialData?.background ? {
@@ -37,7 +44,12 @@ export function TemplateFormClient({
       name: "Background",
       storage_path: initialData.background.storage_path,
       storage_bucket: initialData.background.storage_bucket,
-    } as Asset : null
+    } as Asset : (initialData?.background_asset_id ? {
+      id: initialData.background_asset_id,
+      name: "Background",
+      storage_path: "",
+      storage_bucket: "assets",
+    } as Asset : null)
   )
   
   // Modal states
@@ -122,9 +134,35 @@ export function TemplateFormClient({
     )
   }
 
+  const handleSubmit = (formData: FormData) => {
+    setErrorMessage(null)
+    startTransition(async () => {
+      try {
+        if (initialData) {
+          await updateTemplateFromForm(initialData.id, formData)
+        } else {
+          await createTemplateFromForm(formData)
+        }
+      } catch (err: unknown) {
+        const digest = typeof err === "object" && err !== null && "digest" in err ? String((err as { digest?: unknown }).digest) : ""
+        if ((err instanceof Error && err.message.includes("NEXT_REDIRECT")) || digest.startsWith("NEXT_REDIRECT")) {
+          return
+        }
+        console.error("Failed to save template:", err)
+        setErrorMessage(err instanceof Error ? err.message : "Failed to save template.")
+      }
+    })
+  }
+
   return (
     <>
-      <form action={initialData ? updateTemplateFromForm.bind(null, initialData.id) : createTemplateFromForm} className="clay-surface rounded-3xl border border-outline-variant/20 p-6 sm:p-8 space-y-6">
+      <form action={handleSubmit} className="clay-surface rounded-3xl border border-outline-variant/20 p-6 sm:p-8 space-y-6">
+        {errorMessage && (
+          <div className="p-4 rounded-2xl bg-error/10 border border-error/30 text-error flex items-center gap-3 text-sm font-medium">
+            <AlertCircle size={18} className="shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
         <input type="hidden" name="thumbnail_asset_id" value={thumbnailAsset?.id || ""} />
         <input type="hidden" name="background_asset_id" value={backgroundAsset?.id || ""} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
@@ -248,8 +286,19 @@ export function TemplateFormClient({
         <Link href="/dashboard/templates" className="rounded-xl px-5 py-2.5 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low transition-colors">
           Cancel
         </Link>
-        <button type="submit" className="clay-button-primary rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-95 shadow-lg">
-          {initialData ? "Save Changes" : "Create Template"}
+        <button 
+          type="submit" 
+          disabled={isPending}
+          className="clay-button-primary rounded-xl px-6 py-2.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-95 shadow-lg flex items-center gap-2 disabled:opacity-70"
+        >
+          {isPending ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              <span>{initialData ? "Saving..." : "Creating..."}</span>
+            </>
+          ) : (
+            <span>{initialData ? "Save Changes" : "Create Template"}</span>
+          )}
         </button>
       </div>
     </form>

@@ -322,7 +322,7 @@ export function UsageClient({
 
                       {/* Model */}
                       <td className="p-4 text-xs text-on-surface-variant hidden sm:table-cell whitespace-nowrap">
-                        <span className="font-mono">{run.model || "gemini-1.5-flash"}</span>
+                        <span className="font-mono">{run.model || "gemini-3.1-flash-lite"}</span>
                       </td>
 
                       {/* Tokens */}
@@ -398,7 +398,7 @@ export function UsageClient({
               </div>
               <div className="flex flex-col gap-1 p-3 rounded-xl bg-surface-container-low border border-outline-variant/10">
                 <span className="text-xs text-on-surface-variant">Model</span>
-                <span className="font-semibold text-on-surface font-mono text-xs">{selectedRun.model || "gemini-1.5-flash"}</span>
+                <span className="font-semibold text-on-surface font-mono text-xs">{selectedRun.model || "gemini-3.1-flash-lite"}</span>
               </div>
               <div className="flex flex-col gap-1 p-3 rounded-xl bg-surface-container-low border border-outline-variant/10">
                 <span className="text-xs text-on-surface-variant">Duration</span>

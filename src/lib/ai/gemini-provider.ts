@@ -1,5 +1,7 @@
 import { AIProvider, AIRequest, AIResponse } from "./types";
 
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+
 export class GeminiProvider implements AIProvider {
   name = "gemini";
   private apiKey: string;
@@ -9,7 +11,7 @@ export class GeminiProvider implements AIProvider {
   }
 
   async generateText(request: AIRequest): Promise<AIResponse> {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${this.apiKey}`;
     
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -26,6 +28,8 @@ export class GeminiProvider implements AIProvider {
         generationConfig: {
           temperature: request.temperature ?? 0.7,
           maxOutputTokens: request.maxTokens,
+          thinkingConfig: { thinkingLevel: "minimal" },
+          ...(request.jsonMode ? { responseMimeType: "application/json" } : {}),
         }
       })
     });
@@ -36,7 +40,8 @@ export class GeminiProvider implements AIProvider {
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const parts = (data.candidates?.[0]?.content?.parts ?? []) as Array<{ thought?: boolean; text?: string }>;
+    const text = parts.map((p) => p.thought ? "" : p.text ?? "").join("").trim();
     const u = data.usageMetadata;
 
     return {

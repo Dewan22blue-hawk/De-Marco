@@ -28,9 +28,9 @@ export const DesignElementSchema = z.object({
 
 export const DesignOutputSchema = z.object({
   name: z.string(),
-  design_type: z.enum(['flyer', 'poster', 'banner', 'social_post', 'social_story', 'custom']),
-  width: z.number(),
-  height: z.number(),
+  design_type: z.enum(['flyer', 'poster', 'banner', 'social_post', 'social_story', 'custom']).catch('custom'),
+  width: z.union([z.number(), z.string().transform(Number)]),
+  height: z.union([z.number(), z.string().transform(Number)]),
   unit: z.string().default('px'),
   elements: z.array(DesignElementSchema),
   metadata: z.record(z.string(), z.any()).optional(),

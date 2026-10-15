@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { duplicateDesign, archiveDesign, deleteDesign, updateDesignElements } from "../actions"
 import { createClient } from "@/lib/supabase/client"
+import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalAction } from "@/components/ui/alert-modal"
 import { CanvasEditor } from "./canvas-editor"
 import { LayersPanel } from "./layers-panel"
 import { PropertiesPanel } from "./properties-panel"
@@ -42,7 +43,8 @@ export function DesignDetailClient({
   const [activeRightTab, setActiveRightTab] = useState<'properties' | 'layers'>('properties')
   const [isSaving, setIsSaving] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  
+  const [notice, setNotice] = useState<{ variant: "error" | "success"; title: string; message: string } | null>(null)
+
   const [assetMap, setAssetMap] = useState<Record<string, { url: string; name?: string }>>(initialAssetMap)
 
   // Scaling calculations
@@ -58,10 +60,9 @@ export function DesignDetailClient({
     setIsSaving(true)
     try {
       await updateDesignElements(design.id, elements)
-      alert("Design saved successfully!")
+      setNotice({ variant: "success", title: "Saved", message: "Design saved successfully!" })
     } catch (err) {
-      console.error(err)
-      alert("Failed to save changes.")
+      setNotice({ variant: "error", title: "Save failed", message: "Failed to save changes." })
     } finally {
       setIsSaving(false)
     }
@@ -74,26 +75,20 @@ export function DesignDetailClient({
       const node = document.getElementById('design-canvas')
       if (!node) throw new Error("Canvas element not found")
       
-      const selectedEl = selectedElementId
-      setSelectedElementId(null)
-      
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
       const dataUrl = await toPng(node, {
         width: design.width,
         height: design.height,
         pixelRatio: 2
       })
       
-      setSelectedElementId(selectedEl)
-      
       const link = document.createElement('a')
       link.download = `${design.name}.png`
       link.href = dataUrl
       link.click()
+      
+      setNotice({ variant: "success", title: "Exported", message: "Design exported successfully!" })
     } catch (err) {
-      console.error(err)
-      alert("Failed to export image.")
+      setNotice({ variant: "error", title: "Export failed", message: "Failed to export image." })
     } finally {
       setIsExporting(false)
     }
@@ -332,6 +327,18 @@ export function DesignDetailClient({
           </div>
         </div>
       </div>
+
+      <AlertModal open={notice !== null} onOpenChange={(open) => { if (!open) setNotice(null) }}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>{notice?.title}</AlertModalTitle>
+            <AlertModalDescription>{notice?.message}</AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalAction onClick={() => setNotice(null)}>OK</AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
     </div>
   )
 }

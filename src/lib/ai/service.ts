@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { GeminiProvider } from "./gemini-provider";
+import { GeminiProvider, GEMINI_MODEL } from "./gemini-provider";
 import { AITaskType, AIContext, AIDesignRequest } from "./types";
 import { createAuditLog } from "@/lib/audit";
 import { z } from "zod";
@@ -28,11 +28,6 @@ export async function runAITask<T = any>(opts: {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
-
-  const apiKey = await getOrgApiKey(opts.organization_id, 'gemini');
-  if (!apiKey) throw new Error("AI provider configuration missing");
-
-  const provider = new GeminiProvider(apiKey);
 
   // Fetch Brand Kit if not provided in context
   let brand = opts.context?.brand || opts.brand;
@@ -83,10 +78,16 @@ Strict Constraints & Anti-Hallucination Rules:
   let executionError: unknown = null;
 
   try {
+    const apiKey = await getOrgApiKey(opts.organization_id, 'gemini');
+    if (!apiKey) throw new Error("AI provider configuration missing");
+
+    const provider = new GeminiProvider(apiKey);
+
     response = await provider.generateText({
       prompt: opts.prompt,
       systemPrompt,
       temperature: 0.7,
+      jsonMode: !!opts.schema,
     });
 
     const text = response.text;
@@ -94,9 +95,19 @@ Strict Constraints & Anti-Hallucination Rules:
 
     if (opts.schema) {
       const rawText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(rawText);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        console.error("[AI] JSON.parse failed. Raw text:", rawText);
+        throw new Error(`Invalid AI output format - not valid JSON: ${rawText.slice(0, 200)}`);
+      }
       const validated = opts.schema.safeParse(parsed);
-      if (!validated.success) throw new Error("Invalid AI output format");
+      if (!validated.success) {
+        console.error("[AI] Schema validation failed:", JSON.stringify(validated.error.issues, null, 2));
+        console.error("[AI] Parsed object:", JSON.stringify(parsed, null, 2));
+        throw new Error(`Invalid AI output format - schema validation failed: ${validated.error.issues.map(i => i.message).join(", ")}`);
+      }
       finalOutput = validated.data;
     }
   } catch (err) {
@@ -123,7 +134,7 @@ Strict Constraints & Anti-Hallucination Rules:
       status: runStatus,
       error_message: runErrorMessage,
       provider: 'gemini',
-      model: 'gemini-1.5-flash',
+      model: GEMINI_MODEL,
       prompt_tokens: promptTokens,
       completion_tokens: completionTokens,
       total_tokens: totalTokens,
@@ -285,7 +296,10 @@ Instructions: Return a complete DesignOutput matching the requested schema with 
     taskInstruction += assets.map((a: any) => `- ${a.id} (${a.asset_type}): ${a.name} [Tags: ${a.tags?.join(', ') || 'N/A'}]`).join('\n');
   }
 
-  const promptToSend = `${taskInstruction}\n\nUser Brief: ${fullPrompt}`;
+  const w = opts.request.dimension?.width || 1080;
+  const h = opts.request.dimension?.height || 1080;
+  const schemaHint = `\n\nReturn ONLY a valid JSON object (no markdown, no explanation) with this structure:\n{"name":"<title>","design_type":"flyer|poster|banner|social_post|social_story|custom","width":${w},"height":${h},"unit":"px","elements":[{"id":"el_1","type":"text|image|logo|shape","content":"<text>","x":0,"y":0,"width":200,"height":50,"style":{}}]}`;
+  const promptToSend = `${taskInstruction}\n\nUser Brief: ${fullPrompt}${schemaHint}`;
 
   return runAITask<DesignOutput>({
     organization_id: opts.organization_id,

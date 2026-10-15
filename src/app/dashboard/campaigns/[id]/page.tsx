@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { FileText, PlusCircle } from "lucide-react"
+import { FileText, PlusCircle, Palette } from "lucide-react"
 
 export const metadata = {
   title: "Campaign Details | De-Marco Studio",
@@ -18,6 +18,9 @@ export default async function CampaignDetailPage(props: { params: Promise<{ id: 
       *,
       campaign_contents (
         contents (*)
+      ),
+      campaign_designs (
+        design:designs (id, name, design_type, status)
       )
     `)
     .eq("id", campaignId)
@@ -31,6 +34,10 @@ export default async function CampaignDetailPage(props: { params: Promise<{ id: 
   const activeContents = (campaign.campaign_contents || [])
     .map((cc: any) => cc.contents)
     .filter((c: any) => c && !c.deleted_at)
+
+  const linkedDesigns = (campaign.campaign_designs || [])
+    .map((cd: any) => cd.design)
+    .filter(Boolean)
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8 max-w-7xl mx-auto w-full">
@@ -110,6 +117,37 @@ export default async function CampaignDetailPage(props: { params: Promise<{ id: 
           ) : (
             <div className="p-8 text-center border border-dashed border-outline-variant/50 rounded-2xl bg-surface-container-lowest">
               <p className="text-on-surface-variant mb-4">No content associated with this campaign yet.</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-4">
+            <h3 className="text-xl font-bold text-on-surface">Linked Designs</h3>
+            <Link href={`/dashboard/designs/new?campaign_id=${campaign.id}`} className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80">
+              <PlusCircle className="w-4 h-4" />
+              Add Design
+            </Link>
+          </div>
+
+          {linkedDesigns.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {linkedDesigns.map((design: any) => (
+                <Link href={`/dashboard/designs/${design.id}`} key={design.id} className="clay-card rounded-xl p-5 flex flex-col gap-3 relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all duration-300 block">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-semibold text-on-surface line-clamp-1">{design.name}</h4>
+                    <span className="text-xs font-medium px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded-full">
+                      {design.status}
+                    </span>
+                  </div>
+                  <div className="text-xs text-on-surface-variant font-medium flex items-center gap-2">
+                    <Palette className="w-3 h-3" />
+                    <span className="capitalize">{design.design_type?.replace(/_/g, " ") || "Custom"}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center border border-dashed border-outline-variant/50 rounded-2xl bg-surface-container-lowest">
+              <p className="text-on-surface-variant mb-4">No designs linked to this campaign yet.</p>
             </div>
           )}
         </div>

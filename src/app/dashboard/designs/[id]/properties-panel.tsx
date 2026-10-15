@@ -1,8 +1,36 @@
 "use client"
 
 import React, { useState } from "react"
-import { Settings2, Type, Square, Move, Maximize, Palette, Trash2, Image as ImageIcon } from "lucide-react"
+import {
+  Settings2,
+  Type,
+  Move,
+  Palette,
+  Trash2,
+  Image as ImageIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  AlignStartHorizontal,
+  AlignCenterHorizontal,
+  AlignEndHorizontal,
+} from "lucide-react"
 import { AssetPickerModal } from "@/components/dashboard/assets/asset-picker-modal"
+import { createClient } from "@/lib/supabase/client"
+
+const HORIZONTAL_ALIGNMENTS = [
+  { value: "left", Icon: AlignLeft, label: "Align left", justify: "flex-start" },
+  { value: "center", Icon: AlignCenter, label: "Align center", justify: "center" },
+  { value: "right", Icon: AlignRight, label: "Align right", justify: "flex-end" },
+  { value: "justify", Icon: AlignJustify, label: "Justify", justify: "flex-start" },
+] as const
+
+const VERTICAL_ALIGNMENTS = [
+  { value: "flex-start", Icon: AlignStartHorizontal, label: "Align top" },
+  { value: "center", Icon: AlignCenterHorizontal, label: "Align middle" },
+  { value: "flex-end", Icon: AlignEndHorizontal, label: "Align bottom" },
+] as const
 
 export function PropertiesPanel({ 
   element, 
@@ -44,8 +72,11 @@ export function PropertiesPanel({
     }
   }
 
+  const applyStyle = (updates: Record<string, unknown>) => {
+    onUpdate({ style: { ...element.style, ...updates } })
+  }
+
   const handleAssetSelect = (asset: any) => {
-    const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     const { data } = supabase.storage.from(asset.storage_bucket).getPublicUrl(asset.storage_path)
     
@@ -154,6 +185,59 @@ export function PropertiesPanel({
           </div>
         )}
 
+        {/* Alignment Group (if text) */}
+        {element.element_type === 'text' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-outline uppercase tracking-wider">
+              <AlignCenter size={12} /> Alignment
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-on-surface-variant ml-1">Horizontal</label>
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                {HORIZONTAL_ALIGNMENTS.map(({ value, Icon, label, justify }) => {
+                  const active = (element.style?.textAlign || 'left') === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => applyStyle({ textAlign: value, justifyContent: justify })}
+                      title={label}
+                      aria-label={label}
+                      aria-pressed={active}
+                      className={`flex-1 py-1.5 rounded-lg flex items-center justify-center transition-colors ${active ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'}`}
+                    >
+                      <Icon size={14} />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-on-surface-variant ml-1">Vertical</label>
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                {VERTICAL_ALIGNMENTS.map(({ value, Icon, label }) => {
+                  const active = (element.style?.alignItems || 'flex-start') === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => applyStyle({ alignItems: value })}
+                      title={label}
+                      aria-label={label}
+                      aria-pressed={active}
+                      className={`flex-1 py-1.5 rounded-lg flex items-center justify-center transition-colors ${active ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'}`}
+                    >
+                      <Icon size={14} />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Style Group */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-[10px] font-bold text-outline uppercase tracking-wider">
@@ -218,6 +302,16 @@ export function PropertiesPanel({
                     <option value="bold">Bold</option>
                     <option value="900">Black</option>
                   </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-on-surface-variant ml-1">Line Height</label>
+                    <input type="text" name="style.lineHeight" value={element.style?.lineHeight || ''} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="1.4" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-on-surface-variant ml-1">Letter Spacing</label>
+                    <input type="text" name="style.letterSpacing" value={element.style?.letterSpacing || ''} onChange={handleChange} className="w-full px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="0px" />
+                  </div>
                 </div>
               </>
             )}

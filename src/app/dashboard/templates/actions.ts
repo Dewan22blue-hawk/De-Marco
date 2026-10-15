@@ -234,6 +234,10 @@ export async function updateTemplate(templateId: string, data: Record<string, un
     .eq('organization_id', profile.default_organization_id)
     .single()
 
+  if (!oldTemplate) {
+    throw new Error("Template not found")
+  }
+
   const variables = Array.isArray(data.variables) ? (data.variables as TemplateVariable[]) : undefined
   const elements = Array.isArray(data.elements) ? (data.elements as TemplateElement[]) : undefined
   const templateData = { ...data }
@@ -252,7 +256,9 @@ export async function updateTemplate(templateId: string, data: Record<string, un
     .select()
     .single()
 
-  if (error) throw error
+  if (error || !template) {
+    throw new Error(error?.message || "Failed to update template")
+  }
 
   // Update variables (delete and re-insert for simplicity)
   if (variables) {
@@ -329,16 +335,38 @@ export async function deleteTemplate(templateId: string) {
     .eq('organization_id', profile.default_organization_id)
     .single()
 
+  if (!oldTemplate) {
+    throw new Error("Template not found")
+  }
+
   const { error } = await supabase
     .from('templates')
-    .update({ 
+    .update({
       deleted_at: new Date().toISOString(),
       updated_by: user.id
     })
     .eq('id', templateId)
     .eq('organization_id', profile.default_organization_id)
 
-  if (error) throw error
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const { data: stillActive, error: verifyError } = await supabase
+    .from('templates')
+    .select('id')
+    .eq('id', templateId)
+    .eq('organization_id', profile.default_organization_id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (verifyError) {
+    throw new Error(verifyError.message)
+  }
+
+  if (stillActive) {
+    throw new Error("Template delete was blocked")
+  }
 
   await createAuditLog({
     organization_id: profile.default_organization_id,
@@ -349,6 +377,7 @@ export async function deleteTemplate(templateId: string) {
   })
 
   revalidatePath("/dashboard/templates")
+  revalidatePath(`/dashboard/templates/${templateId}`)
   return { success: true }
 }
 
@@ -566,9 +595,11 @@ export async function createTemplateFromForm(formData: FormData): Promise<void> 
 
   if (!profile?.default_organization_id) throw new Error("No organization")
 
+  const rawCreateCode = String(formData.get('code') || '').trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-')
+
   const payload = {
     name: String(formData.get('name') || '').trim(),
-    code: String(formData.get('code') || '').trim(),
+    code: rawCreateCode || `template-${Date.now().toString().slice(-6)}`,
     description: String(formData.get('description') || '').trim() || null,
     category_id: String(formData.get('category_id') || '') || null,
     template_type: String(formData.get('template_type') || 'custom') as 'flyer' | 'poster' | 'banner' | 'social_post' | 'social_story' | 'custom',
@@ -604,9 +635,11 @@ export async function updateTemplateFromForm(templateId: string, formData: FormD
 
   if (!profile?.default_organization_id) throw new Error("No organization")
 
+  const rawUpdateCode = String(formData.get('code') || '').trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-')
+
   const payload = {
     name: String(formData.get('name') || '').trim(),
-    code: String(formData.get('code') || '').trim(),
+    code: rawUpdateCode || `template-${Date.now().toString().slice(-6)}`,
     description: String(formData.get('description') || '').trim() || null,
     category_id: String(formData.get('category_id') || '') || null,
     template_type: String(formData.get('template_type') || 'custom') as 'flyer' | 'poster' | 'banner' | 'social_post' | 'social_story' | 'custom',

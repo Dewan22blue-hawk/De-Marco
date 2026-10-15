@@ -12,6 +12,7 @@ import { archiveTemplate, cloneTemplate, deleteTemplate } from "./actions"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel, AlertModalAction } from "@/components/ui/alert-modal"
 
 interface Template {
   id: string
@@ -58,6 +59,8 @@ export function TemplateLibraryClient({
   const [templates, setTemplates] = useState<Template[]>(initialTemplates)
   const [searchQuery, setSearchQuery] = useState(search)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [pending, setPending] = useState<{ type: "delete" | "archive"; ids: string[] } | null>(null)
+  const [notice, setNotice] = useState<{ variant: "error" | "success"; title: string; message: string } | null>(null)
   const viewMode = searchParams.get("view") || "grid"
 
   // Sync templates when initialTemplates changes (server revalidation)
@@ -98,23 +101,12 @@ export function TemplateLibraryClient({
     }
   }
 
-  const handleArchive = async (templateId: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== templateId))
-    setSelectedIds(prev => { const n = new Set(prev); n.delete(templateId); return n; })
-    try {
-      await archiveTemplate(templateId)
-    } catch {
-      // Could implement toast here, state reverts on next revalidation
-    }
+  const handleArchive = (templateId: string) => {
+    setPending({ type: "archive", ids: [templateId] })
   }
 
-  const handleDelete = async (templateId: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== templateId))
-    setSelectedIds(prev => { const n = new Set(prev); n.delete(templateId); return n; })
-    try {
-      await deleteTemplate(templateId)
-    } catch {
-    }
+  const handleDelete = (templateId: string) => {
+    setPending({ type: "delete", ids: [templateId] })
   }
 
   const toggleSelect = (id: string) => {
@@ -129,18 +121,41 @@ export function TemplateLibraryClient({
     else setSelectedIds(new Set(templates.map(t => t.id)))
   }
 
-  const handleBulkArchive = async () => {
-    const ids = Array.from(selectedIds)
-    setTemplates(prev => prev.filter(t => !ids.includes(t.id)))
-    setSelectedIds(new Set())
-    await Promise.all(ids.map(id => archiveTemplate(id)))
+  const handleBulkArchive = () => {
+    if (selectedIds.size === 0) return
+    setPending({ type: "archive", ids: Array.from(selectedIds) })
   }
 
-  const handleBulkDelete = async () => {
-    const ids = Array.from(selectedIds)
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return
+    setPending({ type: "delete", ids: Array.from(selectedIds) })
+  }
+
+  const confirmPending = async () => {
+    if (!pending) return
+    const { type, ids } = pending
+    const prevTemplates = templates
+    const prevSelected = selectedIds
     setTemplates(prev => prev.filter(t => !ids.includes(t.id)))
-    setSelectedIds(new Set())
-    await Promise.all(ids.map(id => deleteTemplate(id)))
+    setSelectedIds(prev => {
+      const n = new Set(prev)
+      ids.forEach(id => n.delete(id))
+      return n
+    })
+    setPending(null)
+    try {
+      if (type === "archive") {
+        await Promise.all(ids.map(id => archiveTemplate(id)))
+      } else {
+        await Promise.all(ids.map(id => deleteTemplate(id)))
+      }
+    } catch (err: unknown) {
+      console.error(`Failed to ${type} template:`, err)
+      setTemplates(prevTemplates)
+      setSelectedIds(prevSelected)
+      const message = err instanceof Error ? err.message : `Failed to ${type} template`
+      setNotice({ variant: "error", title: type === "archive" ? "Archive failed" : "Delete failed", message })
+    }
   }
 
   const getThumbnailUrl = (path: string | null | undefined) => {
@@ -329,6 +344,37 @@ export function TemplateLibraryClient({
           </button>
         </div>
       )}
+
+      <AlertModal open={pending !== null} onOpenChange={(open) => { if (!open) setPending(null) }}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>
+              {pending?.type === "archive" ? "Archive" : "Delete"} template{pending && pending.ids.length > 1 ? "s" : ""}
+            </AlertModalTitle>
+            <AlertModalDescription>
+              Are you sure you want to {pending?.type === "archive" ? "archive" : "delete"} {pending && pending.ids.length > 1 ? `${pending.ids.length} templates` : "this template"}?
+            </AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalCancel>Cancel</AlertModalCancel>
+            <AlertModalAction className={pending?.type === "delete" ? "bg-red-600 hover:bg-red-700" : undefined} onClick={confirmPending}>
+              {pending?.type === "archive" ? "Archive" : "Delete"}
+            </AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
+
+      <AlertModal open={notice !== null} onOpenChange={(open) => { if (!open) setNotice(null) }}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>{notice?.title}</AlertModalTitle>
+            <AlertModalDescription>{notice?.message}</AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalAction onClick={() => setNotice(null)}>OK</AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
     </div>
   )
 }

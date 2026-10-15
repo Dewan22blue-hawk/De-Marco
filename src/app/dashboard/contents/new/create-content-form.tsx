@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createContent } from "../actions"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,30 @@ export function CreateContentForm({
     content_type: searchParams.get("content_type") || "post",
     status: "draft"
   })
+
+  // Load generated content from sessionStorage on mount
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem("generated_content_form")
+      if (stored) {
+        const data = JSON.parse(stored)
+        setFormData(prev => ({
+          ...prev,
+          title: data.title || prev.title,
+          body: data.body || prev.body,
+          platform: data.platform || prev.platform,
+          content_type: data.content_type || prev.content_type,
+        }))
+        if (data.campaign_id && canLinkCampaigns) {
+          setCampaignId(data.campaign_id)
+        }
+        sessionStorage.removeItem("generated_content_form")
+      }
+    } catch (e) {
+      console.error("Failed to load generated content:", e)
+    }
+  }, [canLinkCampaigns])
 
   const selectedCampaign = campaigns.find(c => c.id === campaignId)
 

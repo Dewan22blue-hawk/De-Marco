@@ -2,11 +2,21 @@
 
 import { useState } from "react"
 import { createContent, generateContentWithAI } from "./actions"
-import { Sparkles, Loader2, ArrowRight, Save } from "lucide-react"
+import { Sparkles, Loader2, ArrowRight, Save, Palette } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel } from "@/components/ui/alert-modal"
 import { Button } from "@/components/ui/button"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { storeDesignBrief } from "@/lib/design/content-brief"
+
+interface GeneratedContent {
+  title: string
+  body: string
+  hashtags?: string[]
+  cta?: string
+  tone?: string
+  content_type?: string
+}
 
 export function AutoGenerateForm({
   campaigns = [],
@@ -21,7 +31,8 @@ export function AutoGenerateForm({
   const [campaignId, setCampaignId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [generatedData, setGeneratedData] = useState<any>(null)
+  const [generatedData, setGeneratedData] = useState<GeneratedContent | null>(null)
+  const [generationError, setGenerationError] = useState<string | null>(null)
   const router = useRouter()
 
   const campaignOptions = [
@@ -36,21 +47,24 @@ export function AutoGenerateForm({
     setIsLoading(true)
     setShowModal(true)
     setGeneratedData(null)
+    setGenerationError(null)
     
     try {
       const activeCampaignId = canLinkCampaigns && campaignId ? campaignId : undefined
       const result = await generateContentWithAI(topic, contentType, activeCampaignId)
       setGeneratedData(result.generated)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to generate content:", error)
-      setGeneratedData({ error: "Failed to generate content" })
+      const errorMessage = error?.message || "Failed to generate content"
+      setGenerationError(errorMessage)
+      setGeneratedData({ error: errorMessage } as any)
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleSaveDraft = async () => {
-    if (!generatedData || generatedData.error) return
+    if (!generatedData || generationError) return
     setIsLoading(true)
     try {
       await createContent({
@@ -64,28 +78,75 @@ export function AutoGenerateForm({
       setTopic("")
       setShowModal(false)
       router.refresh()
-    } catch (error) {
-      console.error(error)
+    } catch (error: any) {
+      setGenerationError(error?.message || "Failed to save draft")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleApplyToForm = () => {
-    if (!generatedData || generatedData.error) return
-    const params = new URLSearchParams()
-    if (generatedData.title) params.set("title", generatedData.title)
-    if (generatedData.body) params.set("body", generatedData.body)
-    if (generatedData.content_type) params.set("content_type", generatedData.content_type)
-    if (generatedData.hashtags) params.set("hashtags", Array.isArray(generatedData.hashtags) ? generatedData.hashtags.join(" ") : generatedData.hashtags)
-    params.set("platform", platform)
-    if (canLinkCampaigns && campaignId) {
-      params.set("campaign_id", campaignId)
-    }
+    if (!generatedData || generationError) return
     
-    setShowModal(false)
-    setTopic("")
-    router.push(`/dashboard/contents/new?${params.toString()}`)
+    // Use sessionStorage to pass large content instead of URL params
+    try {
+      const formData = {
+        title: generatedData.title || "",
+        body: generatedData.body || "",
+        content_type: generatedData.content_type || contentType,
+        hashtags: Array.isArray(generatedData.hashtags) ? generatedData.hashtags.join(" ") : (generatedData.hashtags || ""),
+        platform: platform,
+        campaign_id: canLinkCampaigns && campaignId ? campaignId : "",
+      }
+      sessionStorage.setItem("generated_content_form", JSON.stringify(formData))
+      setShowModal(false)
+      setTopic("")
+      router.push("/dashboard/contents/new")
+    } catch (error) {
+      console.error("Failed to store generated content:", error)
+      setGenerationError("Failed to apply content to form")
+    }
+  }
+
+  const handleCreateDesign = async () => {
+    if (!generatedData || generationError) return
+    setIsLoading(true)
+    setGenerationError(null)
+
+    const activeCampaignId = canLinkCampaigns && campaignId ? campaignId : undefined
+
+    try {
+      // Persist the generated copy so it lives in the Content Library
+      const saved = await createContent({
+        title: generatedData.title,
+        body: generatedData.body,
+        platform: platform,
+        content_type: generatedData.content_type || contentType,
+        status: "draft",
+        campaign_id: activeCampaignId,
+      })
+
+      // Hand the brief to the Creative Studio for confirmation
+      storeDesignBrief({
+        title: generatedData.title,
+        body: generatedData.body,
+        hashtags: generatedData.hashtags,
+        cta: generatedData.cta,
+        content_type: generatedData.content_type || contentType,
+        platform: platform,
+        campaign_id: activeCampaignId ?? null,
+        content_id: saved?.content?.id ?? null,
+      })
+
+      setShowModal(false)
+      setTopic("")
+      router.push("/dashboard/designs/new")
+    } catch (error: any) {
+      console.error("Failed to start design from content:", error)
+      setGenerationError(error?.message || "Failed to create design from content")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -171,9 +232,15 @@ export function AutoGenerateForm({
                 <div className="h-24 bg-surface-container-high rounded-md w-full"></div>
                 <div className="h-4 bg-surface-container-high rounded-md w-1/2"></div>
               </div>
-            ) : generatedData?.error ? (
+            ) : generationError ? (
               <div className="p-4 bg-error/10 text-error rounded-xl">
-                {generatedData.error}
+                <p className="font-medium mb-2">Generation Failed</p>
+                <p className="text-sm">{generationError}</p>
+                {generationError.includes("AI_NOT_CONFIGURED") && (
+                  <Button variant="outline" className="mt-3" onClick={() => router.push("/dashboard/settings?tab=ai")}>
+                    Configure AI Settings
+                  </Button>
+                )}
               </div>
             ) : generatedData ? (
               <div className="space-y-4">
@@ -199,13 +266,16 @@ export function AutoGenerateForm({
 
           <AlertModalFooter className="border-t border-outline-variant/30 mt-0 pt-4">
             <AlertModalCancel disabled={isLoading}>Cancel</AlertModalCancel>
-            {!isLoading && !generatedData?.error && (
+            {!isLoading && !generationError && (
               <>
                 <Button variant="outline" onClick={handleSaveDraft} isLoading={isLoading}>
                   <Save className="w-4 h-4 mr-2" /> Save as Draft
                 </Button>
-                <Button variant="default" onClick={handleApplyToForm} isLoading={isLoading}>
+                <Button variant="outline" onClick={handleApplyToForm} isLoading={isLoading}>
                   Apply to Form <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <Button variant="default" onClick={handleCreateDesign} isLoading={isLoading}>
+                  <Palette className="w-4 h-4 mr-2" /> Create Design
                 </Button>
               </>
             )}

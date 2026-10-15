@@ -37,8 +37,8 @@ export const templateElementSchema = z.object({
 export const templateSchema = z.object({
   id: z.string().uuid().optional(),
   organization_id: z.string(),
-  category_id: z.string().optional().nullable(),
-  brand_id: z.string().optional().nullable(),
+  category_id: z.preprocess((val) => (val === "" ? null : val), z.string().uuid().optional().nullable()),
+  brand_id: z.preprocess((val) => (val === "" ? null : val), z.string().uuid().optional().nullable()),
   name: z.string().min(1, "Template name is required"),
   code: z.string().min(1, "Code is required").regex(/^[a-z0-9-_]+$/, "Code must be lowercase alphanumeric with hyphens/underscores"),
   description: z.string().optional().nullable(),
@@ -47,13 +47,15 @@ export const templateSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   unit: z.string().default("px"),
-  thumbnail_asset_id: z.string().uuid().optional().nullable(),
-  background_asset_id: z.string().uuid().optional().nullable(),
+  thumbnail_asset_id: z.preprocess((val) => (val === "" ? null : val), z.string().uuid().optional().nullable()),
+  background_asset_id: z.preprocess((val) => (val === "" ? null : val), z.string().uuid().optional().nullable()),
   is_system: z.boolean().default(false),
   is_active: z.boolean().default(true),
   variables: z.array(templateVariableSchema).optional(),
   elements: z.array(templateElementSchema).optional(),
 });
+
+export const templateUpdateSchema = templateSchema.partial();
 
 export const templateCategorySchema = z.object({
   id: z.string().uuid().optional(),
@@ -69,6 +71,7 @@ export const templateCategorySchema = z.object({
 });
 
 export type Template = z.infer<typeof templateSchema>;
+export type TemplateUpdate = z.infer<typeof templateUpdateSchema>;
 export type TemplateVariable = z.infer<typeof templateVariableSchema>;
 export type TemplateElement = z.infer<typeof templateElementSchema>;
 export type TemplateCategory = z.infer<typeof templateCategorySchema>;

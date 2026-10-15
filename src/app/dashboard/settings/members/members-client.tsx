@@ -4,11 +4,14 @@ import { useState, useTransition } from "react"
 import { inviteMember, removeMember, updateMemberRole } from "./actions"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel, AlertModalAction } from "@/components/ui/alert-modal"
 
 export function MembersClient({ members, organizationId, availableRoles }: { members: any[], organizationId: string, availableRoles: any[] }) {
   const [isPending, startTransition] = useTransition()
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteError, setInviteError] = useState("")
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   
   const handleInvite = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -28,15 +31,20 @@ export function MembersClient({ members, organizationId, availableRoles }: { mem
   }
 
   const handleRemove = (memberId: string) => {
-    if (confirm("Are you sure you want to remove this member?")) {
-      startTransition(async () => {
-        try {
-          await removeMember(organizationId, memberId)
-        } catch (err: any) {
-          alert(err.message)
-        }
-      })
-    }
+    setRemovingMemberId(memberId)
+  }
+
+  const confirmRemove = () => {
+    if (!removingMemberId) return
+    const id = removingMemberId
+    setRemovingMemberId(null)
+    startTransition(async () => {
+      try {
+        await removeMember(organizationId, id)
+      } catch (err: any) {
+        setActionError(err.message || "Failed to remove member.")
+      }
+    })
   }
 
   const handleRoleChange = (memberId: string, roleId: string) => {
@@ -44,7 +52,7 @@ export function MembersClient({ members, organizationId, availableRoles }: { mem
       try {
         await updateMemberRole(organizationId, memberId, roleId)
       } catch (err: any) {
-        alert(err.message)
+        setActionError(err.message || "Failed to update role.")
       }
     })
   }
@@ -188,6 +196,35 @@ export function MembersClient({ members, organizationId, availableRoles }: { mem
           </div>
         </div>
       )}
+
+      <AlertModal open={removingMemberId !== null} onOpenChange={(open) => !open && setRemovingMemberId(null)}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>Remove Member</AlertModalTitle>
+            <AlertModalDescription>
+              Are you sure you want to remove this member? They will lose access to this organization.
+            </AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalCancel>Cancel</AlertModalCancel>
+            <AlertModalAction className="bg-red-600 hover:bg-red-700" onClick={confirmRemove}>
+              Remove
+            </AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
+
+      <AlertModal open={actionError !== null} onOpenChange={(open) => !open && setActionError(null)}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>Action Failed</AlertModalTitle>
+            <AlertModalDescription>{actionError}</AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalAction onClick={() => setActionError(null)}>OK</AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
     </>
   )
 }

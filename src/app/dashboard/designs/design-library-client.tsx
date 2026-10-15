@@ -9,6 +9,7 @@ import { duplicateDesign, archiveDesign, deleteDesign } from "./actions"
 import { createClient } from "@/lib/supabase/client"
 import { Input } from "@/components/ui/input"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { AlertModal, AlertModalContent, AlertModalHeader, AlertModalTitle, AlertModalDescription, AlertModalFooter, AlertModalCancel, AlertModalAction } from "@/components/ui/alert-modal"
 
 export function DesignLibraryClient({ 
   initialDesigns, 
@@ -30,6 +31,8 @@ export function DesignLibraryClient({
 
   // Optimistic UI state for deletions/archives
   const [designs, setDesigns] = useState(initialDesigns)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{ variant: "error" | "success"; title: string; message: string } | null>(null)
 
   useEffect(() => {
     setDesigns(initialDesigns)
@@ -78,21 +81,29 @@ export function DesignLibraryClient({
     setDesigns(prev => prev.filter(d => d.id !== id))
     try {
       await archiveDesign(id)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
       setDesigns(initialDesigns) // revert on error
+      setNotice({ variant: "error", title: "Archive failed", message: `Failed to archive design: ${err?.message || "Unknown error"}` })
     }
   }
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.preventDefault()
-    if (!confirm("Are you sure you want to delete this design?")) return
+    setDeletingId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deletingId) return
+    const id = deletingId
+    setDeletingId(null)
     setDesigns(prev => prev.filter(d => d.id !== id))
     try {
       await deleteDesign(id)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
       setDesigns(initialDesigns) // revert on error
+      setNotice({ variant: "error", title: "Delete failed", message: `Failed to delete design: ${err?.message || "Unknown error"}` })
     }
   }
 
@@ -337,6 +348,35 @@ export function DesignLibraryClient({
           </table>
         </div>
       )}
+
+      <AlertModal open={deletingId !== null} onOpenChange={(open) => { if (!open) setDeletingId(null) }}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>Delete design</AlertModalTitle>
+            <AlertModalDescription>
+              Are you sure you want to delete this design? This action cannot be undone.
+            </AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalCancel>Cancel</AlertModalCancel>
+            <AlertModalAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>
+              Delete
+            </AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
+
+      <AlertModal open={notice !== null} onOpenChange={(open) => { if (!open) setNotice(null) }}>
+        <AlertModalContent>
+          <AlertModalHeader>
+            <AlertModalTitle>{notice?.title}</AlertModalTitle>
+            <AlertModalDescription>{notice?.message}</AlertModalDescription>
+          </AlertModalHeader>
+          <AlertModalFooter>
+            <AlertModalAction onClick={() => setNotice(null)}>OK</AlertModalAction>
+          </AlertModalFooter>
+        </AlertModalContent>
+      </AlertModal>
     </div>
   )
 }
